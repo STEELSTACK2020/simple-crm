@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Simple CRM{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg {
+            background: #0a1622;
+        }
+        .btn-primary, .bg-slate-800 {
+            background: #d80010 !important;
+        }
+        .btn-primary:hover, .hover\:bg-slate-900:hover {
+            background: #b8000d !important;
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-white text-xl font-bold">Simple CRM</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative group">
+                        <a href="/deals" class="text-white hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium">Deals</a>
+                        <div class="absolute left-0 mt-1 w-40 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                            <a href="/deals" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-md">Pipeline</a>
+                            <a href="/quotes" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-b-md">Quotes</a>
+                        </div>
+                    </div>
+                    <div class="relative group">
+                        <a href="/contacts" class="text-white hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium">Contacts</a>
+                        <div class="absolute left-0 mt-1 w-40 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                            <a href="/contacts" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-md">All Contacts</a>
+                            <a href="/salespeople" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Salespeople</a>
+                            <a href="/companies" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-b-md">Companies</a>
+                        </div>
+                    </div>
+                    <a href="/products" class="text-white hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium">Products</a>
+                    <a href="/traffic" class="text-white hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium">Traffic</a>
+                    <div class="relative group">
+                        <span class="text-white hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium cursor-pointer">Settings</span>
+                        <div class="absolute right-0 mt-1 w-44 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                            {% if current_user and current_user.role == 'admin' %}
+                            <a href="/settings/users" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-md">User Management</a>
+                            {% endif %}
+                            <a href="/settings/email" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Email Integration</a>
+                            <a href="/traffic/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-b-md">Traffic Settings</a>
+                        </div>
+                    </div>
+                    <a href="/quotes/add" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-md text-sm font-medium">+ Add Quote</a>
+                    {% if current_user %}
+                    <div class="relative group ml-2">
+                        <span class="text-white hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium cursor-pointer flex items-center">
+                            <span class="w-8 h-8 rounded-full bg-white text-slate-800 flex items-center justify-center font-medium mr-2">
+                                {{ (current_user.first_name or current_user.username)[0]|upper }}
+                            </span>
+                            {{ current_user.username }}
+                        </span>
+                        <div class="absolute right-0 mt-1 w-40 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                            <span class="block px-4 py-2 text-xs text-gray-500 border-b">
+                                {{ current_user.role|title }}
+                            </span>
+                            <a href="/logout" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 rounded-b-md">Logout</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-7xl mx-auto py-4 px-4 text-center text-gray-500 text-sm">
+            Simple CRM - Your Contact Management Hub
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

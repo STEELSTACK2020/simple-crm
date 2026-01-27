@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit User' if user else 'Add User' }} - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/settings/users" class="text-slate-800 hover:text-slate-900 text-sm">&larr; Back to Users</a>
+</div>
+
+<div class="max-w-2xl">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-900">{{ 'Edit User' if user else 'Add New User' }}</h2>
+        </div>
+
+        <form method="POST" class="p-6 space-y-6">
+            {% if error %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <input type="text" id="first_name" name="first_name" value="{{ user.first_name if user else '' }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                </div>
+                <div>
+                    <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input type="text" id="last_name" name="last_name" value="{{ user.last_name if user else '' }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                </div>
+            </div>
+
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" id="email" name="email" value="{{ user.email if user else '' }}"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+            </div>
+
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username *</label>
+                {% if user %}
+                <input type="text" id="username" value="{{ user.username }}" disabled
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-500">
+                <p class="text-xs text-gray-500 mt-1">Username cannot be changed</p>
+                {% else %}
+                <input type="text" id="username" name="username" required
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700"
+                       placeholder="Choose a username">
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+                    Password {% if user %}(leave blank to keep current){% else %}*{% endif %}
+                </label>
+                <input type="password" id="password" name="password" {% if not user %}required{% endif %} minlength="6"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700"
+                       placeholder="{% if user %}Enter new password{% else %}At least 6 characters{% endif %}">
+            </div>
+
+            <div>
+                <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                <select id="role" name="role" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    <option value="salesperson" {{ 'selected' if not user or user.role == 'salesperson' else '' }}>Salesperson</option>
+                    <option value="admin" {{ 'selected' if user and user.role == 'admin' else '' }}>Admin</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Admins can manage users and access all settings</p>
+            </div>
+
+            {% if user %}
+            <div class="flex items-center">
+                <input type="checkbox" id="is_active" name="is_active" {{ 'checked' if user.is_active else '' }}
+                       class="h-4 w-4 text-slate-800 focus:ring-slate-700 border-gray-300 rounded">
+                <label for="is_active" class="ml-2 text-sm text-gray-700">Account is active</label>
+            </div>
+            {% endif %}
+
+            <div class="flex gap-3 pt-4 border-t">
+                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium">
+                    {{ 'Save Changes' if user else 'Create User' }}
+                </button>
+                <a href="/settings/users" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

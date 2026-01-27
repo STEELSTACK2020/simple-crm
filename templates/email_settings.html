@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Email Settings - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Email Integration</h1>
+    <p class="mt-2 text-gray-600">Connect your email to view conversations with contacts directly in the CRM</p>
+</div>
+
+{% if message %}
+<div class="mb-6 p-4 rounded-lg {{ 'bg-green-100 text-green-800' if message_type == 'success' else 'bg-red-100 text-red-800' }}">
+    {{ message }}
+</div>
+{% endif %}
+
+<!-- How It Works -->
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+    <h3 class="font-semibold text-blue-800 mb-2">How It Works</h3>
+    <ul class="text-sm text-blue-700 space-y-1">
+        <li>- Emails stay in your inbox - we only read them (nothing is stored in the CRM database)</li>
+        <li>- When you view a contact, we fetch emails to/from their email address on-demand</li>
+        <li>- You keep emailing from Outlook/Gmail like normal - the CRM just displays the conversation</li>
+        <li>- You can connect both Gmail AND Outlook if you use multiple accounts</li>
+        <li>- Disconnect anytime from this page or from your Google/Microsoft account settings</li>
+    </ul>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Gmail Card -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b bg-gray-50 flex items-center gap-3">
+            <svg class="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+            </svg>
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Gmail / Google Workspace</h2>
+                <p class="text-sm text-gray-500">Connect your Google email account</p>
+            </div>
+        </div>
+        <div class="p-6">
+            {% if email_status.gmail.connected %}
+            <!-- Connected State -->
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                <span class="text-green-700 font-medium">Connected</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">
+                Gmail is connected. Emails will be fetched when viewing contacts.
+            </p>
+            <form action="/settings/email/gmail/disconnect" method="POST">
+                <button type="submit" class="w-full bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 font-medium">
+                    Disconnect Gmail
+                </button>
+            </form>
+            {% elif email_status.gmail.configured %}
+            <!-- Configured but not connected -->
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                <span class="text-yellow-700 font-medium">Not Connected</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">
+                Gmail credentials are configured. Click below to connect.
+            </p>
+            <a href="{{ gmail_auth_url }}" class="block w-full bg-red-500 text-white text-center px-4 py-2 rounded-lg hover:bg-red-600 font-medium">
+                Connect Gmail
+            </a>
+            {% else %}
+            <!-- Not configured -->
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-3 h-3 bg-gray-400 rounded-full"></span>
+                <span class="text-gray-600 font-medium">Not Configured</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">
+                To connect Gmail, you need to set up OAuth credentials:
+            </p>
+            <ol class="text-sm text-gray-600 list-decimal list-inside space-y-2 mb-4">
+                <li>Go to <a href="https://console.cloud.google.com" target="_blank" class="text-blue-600 hover:underline">Google Cloud Console</a></li>
+                <li>Create a project and enable the Gmail API</li>
+                <li>Create OAuth 2.0 credentials (Web application)</li>
+                <li>Add <code class="bg-gray-100 px-1">http://localhost:5000/settings/email/gmail/callback</code> as redirect URI</li>
+                <li>Download the credentials JSON and save as <code class="bg-gray-100 px-1">gmail_credentials.json</code> in the CRM folder</li>
+            </ol>
+            <button disabled class="w-full bg-gray-200 text-gray-500 px-4 py-2 rounded-lg cursor-not-allowed">
+                Configure Gmail First
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Outlook Card -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b bg-gray-50 flex items-center gap-3">
+            <svg class="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M24 7.387v10.478c0 .23-.08.424-.238.576-.158.154-.352.231-.58.231h-8.547v-6.959l1.6 1.322c.062.048.13.072.203.072.086 0 .16-.028.22-.084l.72-.654a.234.234 0 0 0 .072-.178.247.247 0 0 0-.084-.18l-3.29-2.766a.49.49 0 0 0-.63 0l-3.29 2.766a.247.247 0 0 0-.084.18c0 .072.024.132.072.178l.72.654c.06.056.134.084.22.084.073 0 .14-.024.204-.072l1.6-1.322v6.959H.818c-.228 0-.422-.077-.58-.231A.767.767 0 0 1 0 17.865V7.387c0-.187.057-.35.17-.488.113-.139.252-.22.417-.24L7.64 5.13a.624.624 0 0 1 .375.068c.114.06.193.152.238.276L12 12.1l3.746-6.625a.536.536 0 0 1 .239-.276.624.624 0 0 1 .375-.068l7.052 1.528c.165.02.304.1.417.24.113.138.17.301.17.488zM7.99 18.238c.56 0 1.042-.101 1.447-.303.404-.202.726-.487.965-.856.239-.369.411-.806.517-1.311.106-.505.16-1.065.16-1.68 0-.607-.054-1.163-.16-1.668a3.558 3.558 0 0 0-.517-1.303 2.461 2.461 0 0 0-.965-.856c-.405-.206-.888-.31-1.447-.31-.56 0-1.041.104-1.445.31-.403.206-.725.492-.965.856-.24.365-.412.798-.517 1.303-.106.505-.16 1.061-.16 1.668 0 .615.054 1.175.16 1.68.105.505.277.942.517 1.311.24.369.562.654.965.856.404.202.886.303 1.445.303zm0-1.46c-.32 0-.585-.067-.794-.203a1.353 1.353 0 0 1-.476-.556 2.63 2.63 0 0 1-.232-.815 6.223 6.223 0 0 1-.064-.878c0-.303.021-.593.064-.87.043-.277.12-.524.232-.74.112-.216.27-.39.476-.521.209-.131.474-.196.794-.196.32 0 .585.065.793.196.209.131.365.305.47.52.105.217.18.464.226.74.046.278.07.568.07.871 0 .303-.024.597-.07.878a2.503 2.503 0 0 1-.226.815c-.105.22-.261.42-.47.556-.208.136-.472.203-.793.203z"/>
+            </svg>
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Outlook / Office 365</h2>
+                <p class="text-sm text-gray-500">Connect your Microsoft email account</p>
+            </div>
+        </div>
+        <div class="p-6">
+            {% if email_status.outlook.connected %}
+            <!-- Connected State -->
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                <span class="text-green-700 font-medium">Connected</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">
+                Outlook is connected. Emails will be fetched when viewing contacts.
+            </p>
+            <!-- Renewal Reminder -->
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                <div class="flex items-start gap-2">
+                    <svg class="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="text-sm">
+                        <p class="font-medium text-amber-800">API Secret Renewal</p>
+                        <p class="text-amber-700">Client secret expires <strong>January 20, 2028</strong>. Create a new secret in Azure before then.</p>
+                    </div>
+                </div>
+            </div>
+            <form action="/settings/email/outlook/disconnect" method="POST">
+                <button type="submit" class="w-full bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 font-medium">
+                    Disconnect Outlook
+                </button>
+            </form>
+            {% elif email_status.outlook.configured %}
+            <!-- Configured but not connected -->
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                <span class="text-yellow-700 font-medium">Not Connected</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">
+                Outlook credentials are configured. Click below to connect.
+            </p>
+            <a href="{{ outlook_auth_url }}" class="block w-full bg-blue-500 text-white text-center px-4 py-2 rounded-lg hover:bg-blue-600 font-medium">
+                Connect Outlook
+            </a>
+            {% else %}
+            <!-- Not configured -->
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-3 h-3 bg-gray-400 rounded-full"></span>
+                <span class="text-gray-600 font-medium">Not Configured</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">
+                Enter your Microsoft Azure AD app credentials:
+            </p>
+            <form action="/settings/email/outlook/configure" method="POST" class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Client ID (Application ID)</label>
+                    <input type="text" name="client_id" required
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
+                    <input type="password" name="client_secret" required
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tenant ID (optional, defaults to "common")</label>
+                    <input type="text" name="tenant_id" placeholder="common"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button type="submit" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 font-medium">
+                    Save & Connect Outlook
+                </button>
+            </form>
+            <div class="mt-4 pt-4 border-t">
+                <p class="text-xs text-gray-500">
+                    <strong>Setup:</strong> Go to <a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" class="text-blue-600 hover:underline">Azure Portal</a> →
+                    App registrations → New registration. Add redirect URI: <code class="bg-gray-100 px-1">http://localhost:5000/settings/email/outlook/callback</code>
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Outlook Setup Guide -->
+<div class="mt-8 bg-white rounded-lg shadow overflow-hidden">
+    <details class="group">
+        <summary class="px-6 py-4 bg-gray-50 cursor-pointer flex items-center justify-between hover:bg-gray-100">
+            <h3 class="font-semibold text-gray-900">Outlook Setup Guide (Azure App Registration)</h3>
+            <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </summary>
+        <div class="px-6 py-4 space-y-6">
+            <!-- Step 1 -->
+            <div>
+                <h4 class="font-semibold text-gray-800 mb-2">Step 1: Create the App in Azure</h4>
+                <ol class="text-sm text-gray-600 list-decimal list-inside space-y-1 ml-2">
+                    <li>Go to <a href="https://portal.azure.com" target="_blank" class="text-blue-600 hover:underline">portal.azure.com</a></li>
+                    <li>Sign in with your admin Microsoft account</li>
+                    <li>Search for <strong>App registrations</strong> in the top search bar</li>
+                    <li>Click <strong>+ New registration</strong></li>
+                    <li>Name it (e.g., "Steelstack CRM")</li>
+                    <li>Leave "Supported account types" as default</li>
+                    <li>Click <strong>Register</strong></li>
+                </ol>
+            </div>
+
+            <!-- Step 2 -->
+            <div>
+                <h4 class="font-semibold text-gray-800 mb-2">Step 2: Get Your Client ID</h4>
+                <ol class="text-sm text-gray-600 list-decimal list-inside space-y-1 ml-2">
+                    <li>After creating, you'll be on the app's <strong>Overview</strong> page</li>
+                    <li>Copy the <strong>Application (client) ID</strong></li>
+                    <li>Save it somewhere - you'll enter it below</li>
+                </ol>
+            </div>
+
+            <!-- Step 3 -->
+            <div>
+                <h4 class="font-semibold text-gray-800 mb-2">Step 3: Add Redirect URI</h4>
+                <ol class="text-sm text-gray-600 list-decimal list-inside space-y-1 ml-2">
+                    <li>In the left sidebar, click <strong>Authentication</strong></li>
+                    <li>Click <strong>+ Add a platform</strong></li>
+                    <li>Select <strong>Web</strong></li>
+                    <li>Enter this Redirect URI:</li>
+                </ol>
+                <div class="mt-2 ml-4">
+                    <code class="block bg-gray-100 px-3 py-2 rounded text-sm">http://localhost:5000/settings/email/outlook/callback</code>
+                </div>
+                <p class="text-sm text-gray-500 ml-4 mt-1">Click <strong>Configure</strong> to save</p>
+            </div>
+
+            <!-- Step 4 -->
+            <div>
+                <h4 class="font-semibold text-gray-800 mb-2">Step 4: Create Client Secret</h4>
+                <ol class="text-sm text-gray-600 list-decimal list-inside space-y-1 ml-2">
+                    <li>In the left sidebar, click <strong>Certificates & secrets</strong></li>
+                    <li>Click <strong>+ New client secret</strong></li>
+                    <li>Description: "CRM Access"</li>
+                    <li>Expires: 24 months</li>
+                    <li>Click <strong>Add</strong></li>
+                    <li class="text-red-600 font-medium">IMMEDIATELY copy the <strong>Value</strong> column (NOT the Secret ID!)</li>
+                </ol>
+                <div class="mt-2 ml-4 bg-yellow-50 border border-yellow-200 rounded p-3">
+                    <p class="text-sm text-yellow-800">
+                        <strong>Warning:</strong> The Value only shows once! If you lose it, you'll need to create a new secret.
+                        <br><br>
+                        <strong>Value</strong> looks like: <code class="bg-yellow-100 px-1">Ev-8Q~5lT8fZW...</code><br>
+                        <strong>Secret ID</strong> looks like: <code class="bg-yellow-100 px-1">a9c6ac5c-73e3-4a27...</code> (DON'T use this!)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div>
+                <h4 class="font-semibold text-gray-800 mb-2">Step 5: Add Email Permission</h4>
+                <ol class="text-sm text-gray-600 list-decimal list-inside space-y-1 ml-2">
+                    <li>In the left sidebar, click <strong>API permissions</strong></li>
+                    <li>Click <strong>+ Add a permission</strong></li>
+                    <li>Select <strong>Microsoft Graph</strong></li>
+                    <li>Select <strong>Delegated permissions</strong></li>
+                    <li>Search for <strong>Mail.Read</strong> and check the box</li>
+                    <li>Click <strong>Add permissions</strong></li>
+                    <li>Click <strong>Grant admin consent for [Your Company]</strong> at the top</li>
+                    <li>Click <strong>Yes</strong> to confirm</li>
+                </ol>
+            </div>
+
+            <!-- Step 6 -->
+            <div>
+                <h4 class="font-semibold text-gray-800 mb-2">Step 6: Connect in CRM</h4>
+                <ol class="text-sm text-gray-600 list-decimal list-inside space-y-1 ml-2">
+                    <li>Enter your <strong>Client ID</strong> and <strong>Client Secret</strong> (the Value) above</li>
+                    <li>Click <strong>Save & Connect Outlook</strong></li>
+                    <li>Sign in with your work Microsoft account</li>
+                    <li>Click <strong>Accept</strong> on the permissions screen</li>
+                </ol>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="border-t pt-4">
+                <h4 class="font-semibold text-gray-800 mb-2">Troubleshooting</h4>
+                <dl class="text-sm space-y-2">
+                    <dt class="font-medium text-gray-700">"Invalid client secret"</dt>
+                    <dd class="text-gray-600 ml-4">You copied the Secret ID instead of the Value. Create a new secret.</dd>
+
+                    <dt class="font-medium text-gray-700">"No reply address registered"</dt>
+                    <dd class="text-gray-600 ml-4">Add the redirect URI in Azure → Authentication → Add platform → Web</dd>
+
+                    <dt class="font-medium text-gray-700">"Admin approval required"</dt>
+                    <dd class="text-gray-600 ml-4">Go to Azure → API permissions → Click "Grant admin consent"</dd>
+
+                    <dt class="font-medium text-gray-700">"Application not found"</dt>
+                    <dd class="text-gray-600 ml-4">Make sure you're signing in with the same Microsoft account/tenant where you created the app</dd>
+                </dl>
+            </div>
+        </div>
+    </details>
+</div>
+
+<!-- Security Note -->
+<div class="mt-8 bg-gray-50 rounded-lg p-4">
+    <h3 class="font-semibold text-gray-700 mb-2">Security Information</h3>
+    <ul class="text-sm text-gray-600 space-y-1">
+        <li>- Your password is NEVER stored - we use OAuth tokens</li>
+        <li>- Tokens are stored per-user in the database (each person sees only their own emails)</li>
+        <li>- We only request READ permission (cannot send, delete, or modify emails)</li>
+        <li>- You can revoke access anytime from Google/Microsoft account settings</li>
+        <li>- Tokens expire and auto-refresh - no action needed from you</li>
+    </ul>
+</div>
+{% endblock %}

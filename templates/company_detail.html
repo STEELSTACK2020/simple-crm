@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.name }} - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <a href="/companies" class="text-slate-800 hover:text-slate-900 text-sm">&larr; Back to Companies</a>
+    <a href="/companies/{{ company.id }}/edit" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
+        Edit Company
+    </a>
+</div>
+
+<!-- Company Header -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="px-8 py-6 gradient-bg">
+        <h1 class="text-3xl font-bold text-white">{{ company.name }}</h1>
+        {% if company.city or company.state %}
+        <p class="text-white text-opacity-80 mt-1">{{ company.city }}{% if company.city and company.state %}, {% endif %}{{ company.state }}</p>
+        {% endif %}
+    </div>
+
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Contact Info -->
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 uppercase mb-2">Contact</h3>
+                <div class="space-y-2">
+                    {% if company.phone %}
+                    <div>
+                        <a href="tel:{{ company.phone }}" class="text-slate-800 hover:underline">{{ company.phone }}</a>
+                    </div>
+                    {% endif %}
+                    {% if company.email %}
+                    <div>
+                        <a href="mailto:{{ company.email }}" class="text-slate-800 hover:underline">{{ company.email }}</a>
+                    </div>
+                    {% endif %}
+                    {% if company.website %}
+                    <div>
+                        <a href="{{ company.website }}" target="_blank" class="text-slate-800 hover:underline">{{ company.website }}</a>
+                    </div>
+                    {% endif %}
+                    {% if not company.phone and not company.email and not company.website %}
+                    <p class="text-gray-400">No contact info</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Address -->
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 uppercase mb-2">Address</h3>
+                {% if company.address or company.city or company.state %}
+                <div class="text-gray-700">
+                    {% if company.address %}<div>{{ company.address }}</div>{% endif %}
+                    <div>
+                        {{ company.city }}{% if company.city and company.state %}, {% endif %}{{ company.state }} {{ company.zip }}
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-gray-400">No address</p>
+                {% endif %}
+            </div>
+
+            <!-- Stats -->
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 uppercase mb-2">Summary</h3>
+                <div class="space-y-1 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Deals:</span>
+                        <span class="font-medium">{{ deals|length }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Quotes:</span>
+                        <span class="font-medium">{{ quotes|length }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Contacts:</span>
+                        <span class="font-medium">{{ contacts|length }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if company.notes %}
+        <div class="mt-6 pt-6 border-t">
+            <h3 class="text-sm font-medium text-gray-500 uppercase mb-2">Notes</h3>
+            <p class="text-gray-700 whitespace-pre-wrap">{{ company.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Deals -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b bg-gray-50 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-900">Deals ({{ deals|length }})</h2>
+            <a href="/quotes/add" class="text-sm text-slate-800 hover:underline">+ New Quote</a>
+        </div>
+        <div class="divide-y divide-gray-200">
+            {% for deal in deals %}
+            <a href="/deals/{{ deal.id }}" class="block px-6 py-4 hover:bg-gray-50">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="font-medium text-gray-900">{{ deal.name }}</div>
+                        <div class="text-sm text-gray-500">{{ deal.stage|replace('_', ' ')|title }}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-slate-800">${{ '{:,.2f}'.format(deal.value or 0) }}</div>
+                        <div class="text-xs text-gray-500">{{ deal.created_at|format_date }}</div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+            {% if not deals %}
+            <div class="px-6 py-8 text-center text-gray-500">
+                No deals yet
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quotes -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-900">Quotes ({{ quotes|length }})</h2>
+        </div>
+        <div class="divide-y divide-gray-200">
+            {% for quote in quotes %}
+            <a href="/quotes/{{ quote.id }}" class="block px-6 py-4 hover:bg-gray-50">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="font-medium text-gray-900">{{ quote.quote_number }}</div>
+                        <div class="text-sm text-gray-500">{{ quote.title }}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-slate-800">${{ '{:,.2f}'.format(quote.total or 0) }}</div>
+                        <span class="text-xs px-2 py-1 rounded-full
+                            {% if quote.status == 'draft' %}bg-gray-100 text-gray-800
+                            {% elif quote.status == 'sent' %}bg-blue-100 text-blue-800
+                            {% elif quote.status == 'accepted' %}bg-green-100 text-green-800
+                            {% elif quote.status == 'declined' %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ quote.status|title }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+            {% if not quotes %}
+            <div class="px-6 py-8 text-center text-gray-500">
+                No quotes yet
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Contacts -->
+<div class="mt-6 bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b bg-gray-50">
+        <h2 class="text-lg font-semibold text-gray-900">Contacts ({{ contacts|length }})</h2>
+    </div>
+    <div class="divide-y divide-gray-200">
+        {% for contact in contacts %}
+        <a href="/contacts/{{ contact.id }}" class="block px-6 py-4 hover:bg-gray-50">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="font-medium text-gray-900">{{ contact.first_name }} {{ contact.last_name }}</div>
+                    <div class="text-sm text-gray-500">{{ contact.email }}</div>
+                </div>
+                {% if contact.phone %}
+                <div class="text-sm text-gray-600">{{ contact.phone }}</div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+        {% if not contacts %}
+        <div class="px-6 py-8 text-center text-gray-500">
+            No contacts linked to this company
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Company -->
+<div class="mt-6">
+    <form action="/companies/{{ company.id }}/delete" method="POST"
+          onsubmit="return confirm('Are you sure you want to delete this company? This will not delete associated deals, quotes, or contacts.');">
+        <button type="submit" class="text-red-600 hover:text-red-800 text-sm">
+            Delete Company
+        </button>
+    </form>
+</div>
+{% endblock %}

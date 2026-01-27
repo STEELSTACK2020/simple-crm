@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Embeddable Forms - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Lead Capture Form</h1>
+    <p class="mt-2 text-gray-600">Embed this form on your website to capture leads directly into your CRM with UTM tracking</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Instructions & Code -->
+    <div class="space-y-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">How to Use</h2>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                <li>Copy the embed code below</li>
+                <li><strong>Edit the configuration</strong> at the top of the script:
+                    <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                        <li><code>SCRM_API_URL</code> - Your CRM's public URL</li>
+                        <li><code>SCRM_THANK_YOU_PAGE</code> - Redirect URL after submission</li>
+                    </ul>
+                </li>
+                <li>In Squarespace, add a <strong>Code Block</strong> to your page</li>
+                <li>Paste the code and save</li>
+            </ol>
+
+            <div class="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                <p class="text-sm text-red-800">
+                    <strong>Important:</strong> Your CRM must be hosted online (not localhost) for Squarespace to reach it.
+                    Deploy to <strong>PythonAnywhere</strong> (~$5/mo) or use <strong>ngrok</strong> for testing.
+                </p>
+            </div>
+
+            <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                <p class="text-sm text-blue-800">
+                    <strong>UTM Tracking:</strong> When visitors arrive via links with UTM parameters
+                    (e.g., <code class="bg-blue-100 px-1">?utm_source=google&utm_medium=cpc</code>),
+                    the form automatically captures these values.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">Embed Code</h2>
+                <button onclick="copyCode()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    Copy Code
+                </button>
+            </div>
+
+            <div class="relative">
+                <pre id="embedCode" class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed" style="max-height: 400px;"><code>&lt;!-- Simple CRM Lead Form --&gt;
+&lt;style&gt;
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
+.scrm-form{font-family:'Poppins',sans-serif;font-weight:600;max-width:400px;margin:0 auto;background:#fff;padding:24px;border-radius:8px}
+.scrm-form *{box-sizing:border-box}
+.scrm-form label{display:block;margin-bottom:4px;font-weight:500;color:#374151;font-size:14px}
+.scrm-form input,.scrm-form textarea{width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:16px;transition:border-color .2s,box-shadow .2s}
+.scrm-form input:focus,.scrm-form textarea:focus{outline:none;border-color:#0a1622;box-shadow:0 0 0 3px rgba(10,22,34,0.1)}
+.scrm-form button{width:100%;padding:12px;background:#d80010;color:#fff;border:none;border-radius:8px;font-family:'Poppins',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
+.scrm-form button:hover{background:#b8000d}
+.scrm-form button:disabled{background:#9ca3af;cursor:not-allowed}
+.scrm-form .scrm-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.scrm-form .scrm-message{padding:12px;border-radius:8px;margin-bottom:16px;font-size:14px}
+.scrm-form .scrm-success{background:#d1fae5;color:#065f46}
+.scrm-form .scrm-error{background:#fee2e2;color:#991b1b}
+@media(max-width:420px){.scrm-form .scrm-row{grid-template-columns:1fr}}
+&lt;/style&gt;
+
+&lt;form class="scrm-form" id="scrm-lead-form" onsubmit="return scrmSubmit(event)"&gt;
+  &lt;div id="scrm-form-message"&gt;&lt;/div&gt;
+  &lt;div class="scrm-row"&gt;
+    &lt;div&gt;
+      &lt;label for="scrm-fname"&gt;First Name *&lt;/label&gt;
+      &lt;input type="text" id="scrm-fname" name="first_name" required&gt;
+    &lt;/div&gt;
+    &lt;div&gt;
+      &lt;label for="scrm-lname"&gt;Last Name *&lt;/label&gt;
+      &lt;input type="text" id="scrm-lname" name="last_name" required&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div&gt;
+    &lt;label for="scrm-email"&gt;Email *&lt;/label&gt;
+    &lt;input type="email" id="scrm-email" name="email" required&gt;
+  &lt;/div&gt;
+  &lt;div&gt;
+    &lt;label for="scrm-phone"&gt;Phone *&lt;/label&gt;
+    &lt;input type="tel" id="scrm-phone" name="phone" required&gt;
+  &lt;/div&gt;
+  &lt;div&gt;
+    &lt;label for="scrm-message"&gt;Message *&lt;/label&gt;
+    &lt;textarea id="scrm-message" name="message" rows="4" placeholder="How can we help you?" required&gt;&lt;/textarea&gt;
+  &lt;/div&gt;
+  &lt;input type="hidden" id="scrm-utm-source" name="utm_source"&gt;
+  &lt;input type="hidden" id="scrm-utm-medium" name="utm_medium"&gt;
+  &lt;input type="hidden" id="scrm-utm-campaign" name="utm_campaign"&gt;
+  &lt;input type="hidden" id="scrm-utm-term" name="utm_term"&gt;
+  &lt;input type="hidden" id="scrm-utm-content" name="utm_content"&gt;
+  &lt;button type="submit" id="scrm-submit-btn"&gt;GET YOUR SHEET TOGETHER ➤&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;script&gt;
+// *** CONFIGURATION - EDIT THESE ***
+var SCRM_API_URL = '{{ server_url }}/api/form/submit';
+var SCRM_THANK_YOU_PAGE = 'https://www.steelstackusa.com/thank-you';
+
+// Get tracking data from cookie (set by tracking script)
+function scrmGetTrackingData(){
+  var match=document.cookie.match(/(^| )scrm_source=([^;]+)/);
+  if(match){
+    try{return JSON.parse(decodeURIComponent(match[2]));}catch(e){}
+  }
+  return null;
+}
+
+(function(){
+  var tracking=scrmGetTrackingData();
+  var params=new URLSearchParams(window.location.search);
+  // Use tracking cookie data, fallback to URL params
+  document.getElementById('scrm-utm-source').value=tracking?tracking.source:params.get('utm_source')||'';
+  document.getElementById('scrm-utm-medium').value=tracking?tracking.medium:params.get('utm_medium')||'';
+  document.getElementById('scrm-utm-campaign').value=tracking?tracking.campaign:params.get('utm_campaign')||'';
+  document.getElementById('scrm-utm-term').value=tracking?tracking.term:params.get('utm_term')||'';
+  document.getElementById('scrm-utm-content').value=tracking?tracking.content:params.get('utm_content')||'';
+})();
+
+function scrmSubmit(e){
+  e.preventDefault();
+  var form=document.getElementById('scrm-lead-form');
+  var btn=document.getElementById('scrm-submit-btn');
+  var msgEl=document.getElementById('scrm-form-message');
+  var tracking=scrmGetTrackingData();
+  var data={
+    first_name:form.first_name.value,
+    last_name:form.last_name.value,
+    email:form.email.value,
+    phone:form.phone.value,
+    message:form.message.value,
+    utm_source:form.utm_source.value,
+    utm_medium:form.utm_medium.value,
+    utm_campaign:form.utm_campaign.value,
+    utm_term:form.utm_term.value,
+    utm_content:form.utm_content.value,
+    landing_page:tracking?tracking.landing_page:'',
+    referrer:tracking?tracking.referrer:document.referrer
+  };
+  btn.disabled=true;
+  btn.textContent='Sending...';
+  msgEl.innerHTML='';
+  fetch(SCRM_API_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(data)
+  })
+  .then(function(r){return r.json()})
+  .then(function(res){
+    if(res.success){
+      if(SCRM_THANK_YOU_PAGE){
+        window.location.href=SCRM_THANK_YOU_PAGE;
+      }else{
+        msgEl.innerHTML='&lt;div class="scrm-message scrm-success"&gt;'+res.message+'&lt;/div&gt;';
+        form.reset();
+      }
+    }else{
+      msgEl.innerHTML='&lt;div class="scrm-message scrm-error"&gt;'+(res.error||'Something went wrong')+'&lt;/div&gt;';
+      btn.disabled=false;
+      btn.textContent='GET YOUR SHEET TOGETHER ➤';
+    }
+  })
+  .catch(function(){
+    msgEl.innerHTML='&lt;div class="scrm-message scrm-error"&gt;Network error. Please try again.&lt;/div&gt;';
+    btn.disabled=false;
+    btn.textContent='GET YOUR SHEET TOGETHER ➤';
+  });
+  return false;
+}
+&lt;/script&gt;
+&lt;!-- End Simple CRM Lead Form --&gt;</code></pre>
+            </div>
+
+            <p id="copySuccess" class="hidden mt-2 text-green-600 text-sm font-medium">Copied to clipboard!</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Your API Endpoint</h2>
+            <p class="text-gray-600 mb-2">Form submissions are sent to:</p>
+            <code class="block bg-gray-100 p-3 rounded-lg text-sm break-all">{{ server_url }}/api/form/submit</code>
+
+            <div class="mt-4 p-4 bg-yellow-50 rounded-lg">
+                <p class="text-sm text-yellow-800">
+                    <strong>Important:</strong> When you deploy to production, update the URL in the embed code to your production server URL.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Preview -->
+    <div>
+        <div class="bg-white rounded-lg shadow p-6 sticky top-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Live Preview</h2>
+            <p class="text-gray-500 text-sm mb-6">This is how the form will look on your website</p>
+
+            <div class="border rounded-lg p-6 bg-gray-50">
+                <!-- Actual working form preview -->
+                <style>
+                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
+.scrm-form{font-family:'Poppins',sans-serif;font-weight:600;max-width:400px;margin:0 auto;background:#fff;padding:24px;border-radius:8px}
+                .scrm-form *{box-sizing:border-box}
+                .scrm-form label{display:block;margin-bottom:4px;font-weight:500;color:#374151;font-size:14px}
+                .scrm-form input,.scrm-form textarea{width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:16px;transition:border-color .2s,box-shadow .2s}
+                .scrm-form input:focus,.scrm-form textarea:focus{outline:none;border-color:#0a1622;box-shadow:0 0 0 3px rgba(10,22,34,0.1)}
+                .scrm-form button{width:100%;padding:12px;background:#d80010;color:#fff;border:none;border-radius:8px;font-family:'Poppins',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
+                .scrm-form button:hover{background:#b8000d}
+                .scrm-form button:disabled{background:#9ca3af;cursor:not-allowed}
+                .scrm-form .scrm-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+                .scrm-form .scrm-message{padding:12px;border-radius:8px;margin-bottom:16px;font-size:14px}
+                .scrm-form .scrm-success{background:#d1fae5;color:#065f46}
+                .scrm-form .scrm-error{background:#fee2e2;color:#991b1b}
+                @media(max-width:420px){.scrm-form .scrm-row{grid-template-columns:1fr}}
+                </style>
+
+                <form class="scrm-form" id="scrm-lead-form-preview" onsubmit="return scrmSubmitPreview(event)">
+                  <div id="scrm-form-message-preview"></div>
+                  <div class="scrm-row">
+                    <div>
+                      <label for="scrm-fname-preview">First Name *</label>
+                      <input type="text" id="scrm-fname-preview" name="first_name" required>
+                    </div>
+                    <div>
+                      <label for="scrm-lname-preview">Last Name *</label>
+                      <input type="text" id="scrm-lname-preview" name="last_name" required>
+                    </div>
+                  </div>
+                  <div>
+                    <label for="scrm-email-preview">Email *</label>
+                    <input type="email" id="scrm-email-preview" name="email" required>
+                  </div>
+                  <div>
+                    <label for="scrm-phone-preview">Phone *</label>
+                    <input type="tel" id="scrm-phone-preview" name="phone" required>
+                  </div>
+                  <div>
+                    <label for="scrm-message-preview">Message *</label>
+                    <textarea id="scrm-message-preview" name="message" rows="4" placeholder="How can we help you?" required></textarea>
+                  </div>
+                  <button type="submit" id="scrm-submit-btn-preview">GET YOUR SHEET TOGETHER ➤</button>
+                </form>
+            </div>
+
+            <p class="text-xs text-gray-500 mt-4 text-center">Try it! Submissions here will also go to your CRM.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyCode() {
+    var code = document.getElementById('embedCode').textContent;
+    navigator.clipboard.writeText(code).then(function() {
+        document.getElementById('copySuccess').classList.remove('hidden');
+        setTimeout(function() {
+            document.getElementById('copySuccess').classList.add('hidden');
+        }, 2000);
+    });
+}
+
+function scrmSubmitPreview(e) {
+    e.preventDefault();
+    var form = document.getElementById('scrm-lead-form-preview');
+    var btn = document.getElementById('scrm-submit-btn-preview');
+    var msgEl = document.getElementById('scrm-form-message-preview');
+
+    var data = {
+        first_name: form.first_name.value,
+        last_name: form.last_name.value,
+        email: form.email.value,
+        phone: form.phone.value,
+        message: form.message.value,
+        utm_source: new URLSearchParams(window.location.search).get('utm_source') || '',
+        utm_medium: new URLSearchParams(window.location.search).get('utm_medium') || '',
+        utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || '',
+        utm_term: new URLSearchParams(window.location.search).get('utm_term') || '',
+        utm_content: new URLSearchParams(window.location.search).get('utm_content') || ''
+    };
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    msgEl.innerHTML = '';
+
+    fetch('{{ server_url }}/api/form/submit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.success) {
+            msgEl.innerHTML = '<div class="scrm-message scrm-success">' + res.message + '</div>';
+            form.reset();
+        } else {
+            msgEl.innerHTML = '<div class="scrm-message scrm-error">' + (res.error || 'Something went wrong') + '</div>';
+        }
+        btn.disabled = false;
+        btn.textContent = 'GET YOUR SHEET TOGETHER ➤';
+    })
+    .catch(function() {
+        msgEl.innerHTML = '<div class="scrm-message scrm-error">Network error. Please try again.</div>';
+        btn.disabled = false;
+        btn.textContent = 'GET YOUR SHEET TOGETHER ➤';
+    });
+
+    return false;
+}
+</script>
+{% endblock %}

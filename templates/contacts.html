@@ -1,0 +1,570 @@
+{% extends "base.html" %}
+
+{% block title %}Contacts - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex justify-between items-center">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Contacts</h1>
+        <p class="mt-2 text-gray-600">Manage your contacts and track their value</p>
+    </div>
+    <div class="flex gap-3">
+        <a href="/forms" class="bg-white border border-slate-300 hover:bg-gray-50 text-slate-700 px-4 py-2 rounded-lg font-medium">
+            View Form
+        </a>
+        <a href="/contacts/add" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-medium">
+            + Add Contact
+        </a>
+    </div>
+</div>
+
+<!-- Search and Column Settings -->
+<div class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="flex gap-4 items-center">
+        <form method="GET" action="/contacts" class="flex gap-4 flex-1">
+            <input type="text" name="search" value="{{ search_query }}"
+                   placeholder="Search by name or email..."
+                   class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+            <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium">
+                Search
+            </button>
+            {% if search_query %}
+            <a href="/contacts" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium">
+                Clear
+            </a>
+            {% endif %}
+        </form>
+
+        <!-- Column Settings Dropdown -->
+        <div class="relative">
+            <button type="button" id="columnSettingsBtn"
+                    class="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                </svg>
+                Columns
+            </button>
+            <div id="columnSettingsDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <div class="p-3 border-b border-gray-200">
+                    <span class="text-sm font-semibold text-gray-700">Show/Hide Columns</span>
+                </div>
+                <div class="p-2 max-h-64 overflow-y-auto">
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                        <input type="checkbox" data-col="0" checked class="column-toggle rounded text-slate-600">
+                        <span class="text-sm text-gray-700">Name</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                        <input type="checkbox" data-col="1" checked class="column-toggle rounded text-slate-600">
+                        <span class="text-sm text-gray-700">Email</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                        <input type="checkbox" data-col="2" checked class="column-toggle rounded text-slate-600">
+                        <span class="text-sm text-gray-700">Phone</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                        <input type="checkbox" data-col="3" checked class="column-toggle rounded text-slate-600">
+                        <span class="text-sm text-gray-700">Source</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                        <input type="checkbox" data-col="4" checked class="column-toggle rounded text-slate-600">
+                        <span class="text-sm text-gray-700">Medium</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                        <input type="checkbox" data-col="5" checked class="column-toggle rounded text-slate-600">
+                        <span class="text-sm text-gray-700">Last Activity</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                        <input type="checkbox" data-col="6" checked class="column-toggle rounded text-slate-600">
+                        <span class="text-sm text-gray-700">Created</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                        <input type="checkbox" data-col="7" checked class="column-toggle rounded text-slate-600">
+                        <span class="text-sm text-gray-700">Deal Value</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                        <input type="checkbox" data-col="8" checked class="column-toggle rounded text-slate-600">
+                        <span class="text-sm text-gray-700">Actions</span>
+                    </label>
+                </div>
+                <div class="p-2 border-t border-gray-200">
+                    <button type="button" id="resetColumnsBtn" class="w-full text-sm text-slate-600 hover:text-slate-800 py-1">
+                        Reset to Default
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contacts Table -->
+<style>
+    .resizable-table th {
+        position: relative;
+        min-width: 80px;
+    }
+    .resizable-table th .resize-handle {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 5px;
+        cursor: col-resize;
+        background: transparent;
+    }
+    .resizable-table th .resize-handle:hover,
+    .resizable-table th .resize-handle.resizing {
+        background: #cbd5e1;
+    }
+    .col-hidden {
+        display: none !important;
+    }
+</style>
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+    <table id="contacts-table" class="min-w-full divide-y divide-gray-200 resizable-table" style="table-layout: fixed;">
+        <thead class="bg-gray-50">
+            <tr id="header-row">
+                <th draggable="true" data-col="0" data-sort="first_name" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" style="width: 150px;">
+                    <span class="flex items-center gap-1">Name {% if sort_by == 'first_name' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% endif %}</span>
+                    <div class="resize-handle"></div>
+                </th>
+                <th draggable="true" data-col="1" data-sort="email" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" style="width: 200px;">
+                    <span class="flex items-center gap-1">Email {% if sort_by == 'email' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% endif %}</span>
+                    <div class="resize-handle"></div>
+                </th>
+                <th draggable="true" data-col="2" data-sort="phone" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" style="width: 120px;">
+                    <span class="flex items-center gap-1">Phone {% if sort_by == 'phone' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% endif %}</span>
+                    <div class="resize-handle"></div>
+                </th>
+                <th draggable="true" data-col="3" data-sort="utm_source" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" style="width: 120px;">
+                    <span class="flex items-center gap-1">Source {% if sort_by == 'utm_source' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% endif %}</span>
+                    <div class="resize-handle"></div>
+                </th>
+                <th draggable="true" data-col="4" data-sort="utm_medium" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" style="width: 100px;">
+                    <span class="flex items-center gap-1">Medium {% if sort_by == 'utm_medium' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% endif %}</span>
+                    <div class="resize-handle"></div>
+                </th>
+                <th draggable="true" data-col="5" data-sort="last_activity_date" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" style="width: 120px;">
+                    <span class="flex items-center gap-1">Last Activity {% if sort_by == 'last_activity_date' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% endif %}</span>
+                    <div class="resize-handle"></div>
+                </th>
+                <th draggable="true" data-col="6" data-sort="created_at" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" style="width: 100px;">
+                    <span class="flex items-center gap-1">Created {% if sort_by == 'created_at' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% endif %}</span>
+                    <div class="resize-handle"></div>
+                </th>
+                <th draggable="true" data-col="7" data-sort="deal_value" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" style="width: 110px;">
+                    <span class="flex items-center gap-1">Deal Value {% if sort_by == 'deal_value' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% endif %}</span>
+                    <div class="resize-handle"></div>
+                </th>
+                <th data-col="8" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 120px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="contacts-body" class="bg-white divide-y divide-gray-200">
+            {% for contact in contacts %}
+            <tr class="hover:bg-gray-50 contact-row">
+                <td data-col="0" class="px-6 py-4 whitespace-nowrap">
+                    <a href="/contacts/{{ contact.id }}" class="text-sm font-medium text-slate-800 hover:text-slate-900">
+                        {{ contact.first_name }} {{ contact.last_name }}
+                    </a>
+                </td>
+                <td data-col="1" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" title="{{ contact.email }}">{{ contact.email | truncate(25) }}</td>
+                <td data-col="2" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ contact.phone or '-' }}</td>
+                <td data-col="3" class="px-6 py-4 whitespace-nowrap">
+                    {% if contact.utm_source %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800" title="{{ contact.utm_source }}">{{ contact.utm_source | replace('https://', '') | replace('http://', '') | replace('www.', '') | truncate(20) }}</span>
+                    {% else %}
+                    <span class="text-sm text-gray-400">-</span>
+                    {% endif %}
+                </td>
+                <td data-col="4" class="px-6 py-4 whitespace-nowrap">
+                    {% if contact.utm_medium %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">{{ contact.utm_medium }}</span>
+                    {% else %}
+                    <span class="text-sm text-gray-400">-</span>
+                    {% endif %}
+                </td>
+                <td data-col="5" class="px-6 py-4 whitespace-nowrap">
+                    {% if contact.last_activity_date %}
+                    <span class="text-sm text-gray-600">{{ contact.last_activity_date|format_date }}</span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 font-medium">Never</span>
+                    {% endif %}
+                </td>
+                <td data-col="6" class="px-6 py-4 whitespace-nowrap">
+                    <span class="text-sm text-gray-600">{{ contact.created_at|format_date if contact.created_at else '-' }}</span>
+                </td>
+                <td data-col="7" class="px-6 py-4 whitespace-nowrap">
+                    {% if contact.deal_value > 0 %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        ${{ "{:,.2f}".format(contact.deal_value) }}
+                    </span>
+                    {% else %}
+                    <span class="text-sm text-gray-400">-</span>
+                    {% endif %}
+                </td>
+                <td data-col="8" class="px-6 py-4 whitespace-nowrap text-sm">
+                    <a href="/contacts/{{ contact.id }}/edit" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                    <form action="/contacts/{{ contact.id }}/delete" method="POST" class="inline"
+                          onsubmit="return confirm('Are you sure you want to delete this contact?');">
+                        <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not contacts %}
+            <tr>
+                <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                    {% if search_query %}
+                    No contacts found matching "{{ search_query }}"
+                    {% else %}
+                    No contacts yet. <a href="/contacts/add" class="text-slate-800 hover:underline">Add your first contact</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+<div class="mt-4 flex justify-between items-center">
+    <div class="text-sm text-gray-500">
+        Showing {{ contacts | length }} of {{ total_contacts }} contact(s)
+    </div>
+
+    <div class="flex items-center gap-4">
+        <!-- Per Page Selector -->
+        <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-600">Show:</span>
+            <select onchange="window.location.href='/contacts?per_page=' + this.value + '&page=1&sort={{ sort_by }}&dir={{ sort_dir }}'"
+                    class="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+            </select>
+        </div>
+
+        <!-- Page Navigation -->
+        {% if total_pages > 1 %}
+        <div class="flex items-center gap-1">
+            {% if page > 1 %}
+            <a href="/contacts?page={{ page - 1 }}&per_page={{ per_page }}&sort={{ sort_by }}&dir={{ sort_dir }}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">&laquo; Prev</a>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <span class="px-3 py-1 text-sm bg-slate-800 text-white rounded">{{ p }}</span>
+                {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                <a href="/contacts?page={{ p }}&per_page={{ per_page }}&sort={{ sort_by }}&dir={{ sort_dir }}"
+                   class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">{{ p }}</a>
+                {% elif p == page - 3 or p == page + 3 %}
+                <span class="px-2 text-gray-400">...</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <a href="/contacts?page={{ page + 1 }}&per_page={{ per_page }}&sort={{ sort_by }}&dir={{ sort_dir }}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Next &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Save/Load filter preferences for contacts page
+(function() {
+    const STORAGE_KEY = 'contactsFilterPrefs';
+    const hasFilters = window.location.search.length > 0;
+
+    // If page has filters (sort/search/pagination), save them
+    if (hasFilters) {
+        localStorage.setItem(STORAGE_KEY, window.location.search);
+    }
+
+    // If no filters in URL, check for saved preference and redirect
+    if (!hasFilters) {
+        const savedFilter = localStorage.getItem(STORAGE_KEY);
+        if (savedFilter && savedFilter.length > 0) {
+            window.location.href = '/contacts' + savedFilter;
+        }
+    }
+
+    // Intercept "Clear" link to clear saved preference
+    const clearLink = document.querySelector('a[href="/contacts"]');
+    if (clearLink && clearLink.textContent.trim() === 'Clear') {
+        clearLink.addEventListener('click', function(e) {
+            localStorage.removeItem(STORAGE_KEY);
+        });
+    }
+})();
+
+// Column sorting
+(function() {
+    const currentSort = '{{ sort_by }}';
+    const currentDir = '{{ sort_dir }}';
+
+    document.querySelectorAll('#header-row th[data-sort]').forEach(th => {
+        th.addEventListener('click', function(e) {
+            // Don't sort if clicking resize handle or dragging
+            if (e.target.classList.contains('resize-handle')) return;
+            if (e.dataTransfer) return;
+
+            const sortCol = this.dataset.sort;
+            let newDir = 'asc';
+
+            if (sortCol === currentSort) {
+                newDir = currentDir === 'asc' ? 'desc' : 'asc';
+            }
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('sort', sortCol);
+            url.searchParams.set('dir', newDir);
+            url.searchParams.set('page', '1');
+
+            window.location.href = url.toString();
+        });
+    });
+})();
+
+// Column visibility toggle
+(function() {
+    const settingsBtn = document.getElementById('columnSettingsBtn');
+    const dropdown = document.getElementById('columnSettingsDropdown');
+    const toggles = document.querySelectorAll('.column-toggle');
+    const resetBtn = document.getElementById('resetColumnsBtn');
+
+    // Load saved visibility settings
+    const savedVisibility = localStorage.getItem('contactsColumnVisibility');
+    if (savedVisibility) {
+        const visibility = JSON.parse(savedVisibility);
+        toggles.forEach(toggle => {
+            const col = toggle.dataset.col;
+            if (visibility[col] !== undefined) {
+                toggle.checked = visibility[col];
+                applyColumnVisibility(col, visibility[col]);
+            }
+        });
+    }
+
+    // Toggle dropdown
+    settingsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('hidden');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target) && e.target !== settingsBtn) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // Handle column toggle
+    toggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const col = this.dataset.col;
+            applyColumnVisibility(col, this.checked);
+            saveColumnVisibility();
+        });
+    });
+
+    // Reset columns
+    resetBtn.addEventListener('click', () => {
+        toggles.forEach(toggle => {
+            toggle.checked = true;
+            applyColumnVisibility(toggle.dataset.col, true);
+        });
+        localStorage.removeItem('contactsColumnVisibility');
+        localStorage.removeItem('contactsColumnWidths');
+        // Reset widths
+        document.querySelectorAll('#header-row th').forEach(th => {
+            th.style.width = '';
+        });
+    });
+
+    function applyColumnVisibility(col, visible) {
+        const header = document.querySelector(`#header-row th[data-col="${col}"]`);
+        const cells = document.querySelectorAll(`td[data-col="${col}"]`);
+
+        if (visible) {
+            header?.classList.remove('col-hidden');
+            cells.forEach(c => c.classList.remove('col-hidden'));
+        } else {
+            header?.classList.add('col-hidden');
+            cells.forEach(c => c.classList.add('col-hidden'));
+        }
+    }
+
+    function saveColumnVisibility() {
+        const visibility = {};
+        toggles.forEach(toggle => {
+            visibility[toggle.dataset.col] = toggle.checked;
+        });
+        localStorage.setItem('contactsColumnVisibility', JSON.stringify(visibility));
+    }
+})();
+
+// Column resizing
+(function() {
+    let isResizing = false;
+    let currentTh = null;
+    let startX = 0;
+    let startWidth = 0;
+
+    // Load saved column widths
+    const savedWidths = localStorage.getItem('contactsColumnWidths');
+    if (savedWidths) {
+        const widths = JSON.parse(savedWidths);
+        Object.keys(widths).forEach(col => {
+            const th = document.querySelector(`#header-row th[data-col="${col}"]`);
+            if (th) th.style.width = widths[col] + 'px';
+        });
+    }
+
+    // Setup resize handles
+    document.querySelectorAll('.resize-handle').forEach(handle => {
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            isResizing = true;
+            currentTh = this.parentElement;
+            startX = e.pageX;
+            startWidth = currentTh.offsetWidth;
+            this.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        const width = startWidth + (e.pageX - startX);
+        if (width >= 80) {
+            currentTh.style.width = width + 'px';
+        }
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.querySelectorAll('.resize-handle').forEach(h => h.classList.remove('resizing'));
+            saveColumnWidths();
+        }
+    });
+
+    function saveColumnWidths() {
+        const widths = {};
+        document.querySelectorAll('#header-row th[data-col]').forEach(th => {
+            widths[th.dataset.col] = th.offsetWidth;
+        });
+        localStorage.setItem('contactsColumnWidths', JSON.stringify(widths));
+    }
+})();
+
+// Column drag and drop reordering
+(function() {
+    let draggedCol = null;
+    let draggedIndex = null;
+
+    const savedOrder = localStorage.getItem('contactsColumnOrder');
+    if (savedOrder) {
+        applyColumnOrder(JSON.parse(savedOrder));
+    }
+
+    document.querySelectorAll('#header-row th[draggable="true"]').forEach(th => {
+        th.addEventListener('dragstart', handleDragStart);
+        th.addEventListener('dragover', handleDragOver);
+        th.addEventListener('drop', handleDrop);
+        th.addEventListener('dragend', handleDragEnd);
+    });
+
+    function handleDragStart(e) {
+        // Don't drag if on resize handle
+        if (e.target.classList.contains('resize-handle')) {
+            e.preventDefault();
+            return;
+        }
+        draggedCol = this;
+        draggedIndex = parseInt(this.dataset.col);
+        this.style.opacity = '0.5';
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.style.borderLeft = '3px solid #334155';
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        this.style.borderLeft = '';
+        if (draggedCol === this) return;
+
+        const targetIndex = parseInt(this.dataset.col);
+        swapColumns(draggedIndex, targetIndex);
+        saveColumnOrder();
+    }
+
+    function handleDragEnd(e) {
+        this.style.opacity = '1';
+        document.querySelectorAll('#header-row th').forEach(th => {
+            th.style.borderLeft = '';
+        });
+    }
+
+    function swapColumns(fromIndex, toIndex) {
+        const headerRow = document.getElementById('header-row');
+        const headers = Array.from(headerRow.children);
+        const fromHeader = headers.find(h => parseInt(h.dataset.col) === fromIndex);
+        const toHeader = headers.find(h => parseInt(h.dataset.col) === toIndex);
+
+        if (fromIndex < toIndex) {
+            toHeader.after(fromHeader);
+        } else {
+            toHeader.before(fromHeader);
+        }
+
+        document.querySelectorAll('.contact-row').forEach(row => {
+            const cells = Array.from(row.children);
+            const fromCell = cells.find(c => parseInt(c.dataset.col) === fromIndex);
+            const toCell = cells.find(c => parseInt(c.dataset.col) === toIndex);
+
+            if (fromIndex < toIndex) {
+                toCell.after(fromCell);
+            } else {
+                toCell.before(fromCell);
+            }
+        });
+    }
+
+    function saveColumnOrder() {
+        const headers = document.querySelectorAll('#header-row th');
+        const order = Array.from(headers).map(h => parseInt(h.dataset.col));
+        localStorage.setItem('contactsColumnOrder', JSON.stringify(order));
+    }
+
+    function applyColumnOrder(order) {
+        const headerRow = document.getElementById('header-row');
+        const headers = Array.from(headerRow.children);
+
+        order.forEach(colIndex => {
+            const header = headers.find(h => parseInt(h.dataset.col) === colIndex);
+            if (header) headerRow.appendChild(header);
+        });
+
+        document.querySelectorAll('.contact-row').forEach(row => {
+            const cells = Array.from(row.children);
+            order.forEach(colIndex => {
+                const cell = cells.find(c => parseInt(c.dataset.col) === colIndex);
+                if (cell) row.appendChild(cell);
+            });
+        });
+    }
+})();
+</script>
+
+{% endblock %}

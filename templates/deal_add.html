@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block title %}{% if deal %}Edit Deal{% else %}Add Deal{% endif %} - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/deals" class="text-slate-800 hover:text-teal-800 text-sm">&larr; Back to Pipeline</a>
+</div>
+
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b gradient-bg">
+            <h1 class="text-2xl font-bold text-white">{% if deal %}Edit Deal{% else %}New Deal{% endif %}</h1>
+        </div>
+
+        <form method="POST" class="p-6 space-y-6">
+            {% if error %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <!-- Deal Name -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Deal Name *</label>
+                <input type="text" name="name" value="{{ deal.name if deal else '' }}" required
+                       placeholder="e.g., Morrison Steel Project"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+            </div>
+
+            <!-- Value, Stage, and Salesperson -->
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Deal Value ($)</label>
+                    <input type="number" name="value" value="{{ deal.value if deal else '' }}" step="0.01" min="0"
+                           placeholder="0.00"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Stage</label>
+                    <select name="stage" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        {% for stage in ['new_deal', 'proposal', 'negotiation', 'closed_won', 'closed_lost'] %}
+                        <option value="{{ stage }}" {{ 'selected' if deal and deal.stage == stage else '' }}>
+                            {% if stage == 'new_deal' %}New Deal
+                            {% elif stage == 'closed_won' %}Closed Won
+                            {% elif stage == 'closed_lost' %}Closed Lost
+                            {% else %}{{ stage|replace('_', ' ')|title }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <label class="text-sm font-medium text-gray-700">Salesperson</label>
+                        <a href="/salespeople/add" class="text-xs text-slate-600 hover:text-slate-800 hover:underline">add new</a>
+                        <span class="text-gray-300">|</span>
+                        <a href="/salespeople" class="text-xs text-slate-600 hover:text-slate-800 hover:underline">manage team</a>
+                    </div>
+                    <select name="salesperson" id="salesperson-select"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        <option value="">Select salesperson...</option>
+                        {% for sp in salespeople %}
+                        <option value="{{ sp.name }}" {{ 'selected' if deal and deal.salesperson == sp.name else '' }}>{{ sp.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Expected Close Date, Actual Close Date, and Company -->
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date</label>
+                    <input type="date" name="expected_close_date" value="{{ deal.expected_close_date if deal else '' }}"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Actual Close Date</label>
+                    <input type="date" name="actual_close_date" value="{{ deal.actual_close_date if deal else '' }}"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                    <select name="company_id" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        <option value="">-- Select Company --</option>
+                        {% for company in companies %}
+                        <option value="{{ company.id }}" {% if deal and deal.company_id == company.id %}selected{% endif %}>{{ company.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Link Contact (only for new deals) -->
+            {% if not deal %}
+            <div class="border-t pt-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
+
+                <!-- Existing Contact Dropdown -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Link to Existing Contact</label>
+                    <select name="contact_id" id="existing-contact" onchange="toggleNewContactFields()"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        <option value="">-- Select existing or create new below --</option>
+                        {% for contact in contacts %}
+                        <option value="{{ contact.id }}">{{ contact.first_name }} {{ contact.last_name }} ({{ contact.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- OR Divider -->
+                <div class="relative my-4">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-white text-gray-500">OR create new contact</span>
+                    </div>
+                </div>
+
+                <!-- New Contact Fields -->
+                <div id="new-contact-fields">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                            <input type="text" name="new_contact_first_name" id="new-first-name"
+                                   placeholder="John"
+                                   class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                            <input type="text" name="new_contact_last_name" id="new-last-name"
+                                   placeholder="Smith"
+                                   class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" name="new_contact_email" id="new-email"
+                                   placeholder="john@example.com"
+                                   class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                            <input type="tel" name="new_contact_phone" id="new-phone"
+                                   placeholder="(555) 123-4567"
+                                   class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- UTM Tracking / Lead Source Verification -->
+            <div class="border-t pt-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Lead Source (UTM) - Verified</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                        <input type="text" name="utm_source" value="{{ deal.utm_source if deal else '' }}"
+                               placeholder="e.g., google, facebook, youtube"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Medium</label>
+                        <select name="utm_medium" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                            <option value="">-- Select --</option>
+                            <option value="Paid Search" {% if deal and deal.utm_medium == 'Paid Search' %}selected{% endif %}>Paid Search</option>
+                            <option value="Organic Search" {% if deal and deal.utm_medium == 'Organic Search' %}selected{% endif %}>Organic Search</option>
+                            <option value="Paid Social" {% if deal and deal.utm_medium == 'Paid Social' %}selected{% endif %}>Paid Social</option>
+                            <option value="Organic Social" {% if deal and deal.utm_medium == 'Organic Social' %}selected{% endif %}>Organic Social</option>
+                            <option value="Direct Traffic" {% if deal and deal.utm_medium == 'Direct Traffic' %}selected{% endif %}>Direct Traffic</option>
+                            <option value="Referrals" {% if deal and deal.utm_medium == 'Referrals' %}selected{% endif %}>Referrals</option>
+                            <option value="Offline Sources" {% if deal and deal.utm_medium == 'Offline Sources' %}selected{% endif %}>Offline Sources</option>
+                            <option value="Email Marketing" {% if deal and deal.utm_medium == 'Email Marketing' %}selected{% endif %}>Email Marketing</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
+                        <input type="text" name="utm_campaign" value="{{ deal.utm_campaign if deal else '' }}"
+                               placeholder="e.g., spring_sale"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea name="notes" rows="4"
+                          placeholder="Add any notes about this deal..."
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">{{ deal.notes if deal else '' }}</textarea>
+            </div>
+
+            <!-- Submit -->
+            <div class="flex gap-4">
+                <button type="submit" class="flex-1 bg-slate-800 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-900">
+                    {% if deal %}Update Deal{% else %}Create Deal{% endif %}
+                </button>
+                <a href="/deals" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-center">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Salespeople Management Modal -->
+<div id="salespeopleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-gray-900">Manage Sales Team</h3>
+            <button onclick="closeSalespeopleModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <!-- Add New Salesperson -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Add New Salesperson</label>
+                <div class="flex gap-2">
+                    <input type="text" id="newSalespersonName" placeholder="Enter name..."
+                           class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700"
+                           onkeypress="if(event.key === 'Enter') { event.preventDefault(); addSalesperson(); }">
+                    <button type="button" onclick="addSalesperson()"
+                            class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">
+                        Add
+                    </button>
+                </div>
+                <p id="addError" class="text-red-500 text-sm mt-1 hidden"></p>
+            </div>
+
+            <!-- Current Salespeople List -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Current Sales Team</label>
+                <div id="salespeopleList" class="border border-gray-200 rounded-lg divide-y max-h-60 overflow-y-auto">
+                    <!-- Populated by JavaScript -->
+                </div>
+                <p id="emptyMessage" class="text-gray-500 text-sm text-center py-4 hidden">No salespeople added yet</p>
+            </div>
+        </div>
+
+        <div class="px-6 py-4 border-t bg-gray-50 flex justify-end">
+            <button type="button" onclick="closeSalespeopleModal()"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                Done
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle new contact fields based on existing contact selection
+    function toggleNewContactFields() {
+        const existingContact = document.getElementById('existing-contact');
+        const newFields = document.getElementById('new-contact-fields');
+        const inputs = newFields.querySelectorAll('input');
+
+        if (existingContact.value) {
+            // Existing contact selected - dim new contact fields
+            newFields.style.opacity = '0.5';
+            inputs.forEach(input => {
+                input.value = '';
+                input.disabled = true;
+            });
+        } else {
+            // No existing contact - enable new contact fields
+            newFields.style.opacity = '1';
+            inputs.forEach(input => input.disabled = false);
+        }
+    }
+
+    let currentSalespeople = [];
+
+    function openSalespeopleModal() {
+        document.getElementById('salespeopleModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        loadSalespeople();
+    }
+
+    function closeSalespeopleModal() {
+        document.getElementById('salespeopleModal').classList.add('hidden');
+        document.body.style.overflow = '';
+        document.getElementById('newSalespersonName').value = '';
+        document.getElementById('addError').classList.add('hidden');
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeSalespeopleModal();
+    });
+
+    // Close modal on background click
+    document.getElementById('salespeopleModal').addEventListener('click', function(e) {
+        if (e.target === this) closeSalespeopleModal();
+    });
+
+    async function loadSalespeople() {
+        try {
+            const response = await fetch('/api/salespeople');
+            currentSalespeople = await response.json();
+            renderSalespeopleList();
+        } catch (error) {
+            console.error('Error loading salespeople:', error);
+        }
+    }
+
+    function renderSalespeopleList() {
+        const listEl = document.getElementById('salespeopleList');
+        const emptyMsg = document.getElementById('emptyMessage');
+
+        if (currentSalespeople.length === 0) {
+            listEl.classList.add('hidden');
+            emptyMsg.classList.remove('hidden');
+            return;
+        }
+
+        listEl.classList.remove('hidden');
+        emptyMsg.classList.add('hidden');
+
+        listEl.innerHTML = currentSalespeople.map(sp => `
+            <div class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                <span class="text-gray-900">${sp.name}</span>
+                <button type="button" onclick="deleteSalesperson(${sp.id}, '${sp.name}')"
+                        class="text-red-500 hover:text-red-700 text-sm">
+                    Remove
+                </button>
+            </div>
+        `).join('');
+
+        // Also update the dropdown
+        updateDropdown();
+    }
+
+    function updateDropdown() {
+        const select = document.getElementById('salesperson-select');
+        const currentValue = select.value;
+
+        // Keep the first "Select..." option
+        select.innerHTML = '<option value="">Select salesperson...</option>';
+
+        currentSalespeople.forEach(sp => {
+            const option = document.createElement('option');
+            option.value = sp.name;
+            option.textContent = sp.name;
+            if (sp.name === currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    }
+
+    async function addSalesperson() {
+        const nameInput = document.getElementById('newSalespersonName');
+        const errorEl = document.getElementById('addError');
+        const name = nameInput.value.trim();
+
+        if (!name) {
+            errorEl.textContent = 'Please enter a name';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/salespeople', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                nameInput.value = '';
+                errorEl.classList.add('hidden');
+                await loadSalespeople();
+                // Auto-select the newly added salesperson
+                document.getElementById('salesperson-select').value = name;
+            } else {
+                errorEl.textContent = result.error || 'Failed to add salesperson';
+                errorEl.classList.remove('hidden');
+            }
+        } catch (error) {
+            errorEl.textContent = 'Error adding salesperson';
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    async function deleteSalesperson(id, name) {
+        if (!confirm(`Remove ${name} from the sales team?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/salespeople/${id}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                await loadSalespeople();
+            }
+        } catch (error) {
+            console.error('Error deleting salesperson:', error);
+        }
+    }
+</script>
+{% endblock %}

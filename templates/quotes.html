@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Quotes - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex justify-between items-center">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Quotes</h1>
+        <p class="mt-2 text-gray-600">Create and manage quotes for your deals</p>
+    </div>
+    <a href="/quotes/add" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-medium">
+        + New Quote
+    </a>
+</div>
+
+<!-- Search and Filters -->
+<div class="mb-6 flex flex-wrap items-center gap-4">
+    <!-- Search -->
+    <div class="flex-1 min-w-[250px]">
+        <input type="text" id="search-input" placeholder="Search customer or quote number..."
+               class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+               onkeyup="filterQuotes()">
+    </div>
+
+    <!-- Status Filter -->
+    <div class="flex items-center gap-2">
+        <span class="text-sm font-medium text-gray-700">Status:</span>
+        <select id="status-filter" onchange="filterQuotes()"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+            <option value="">All Statuses</option>
+            {% for status in statuses %}
+            <option value="{{ status }}">{{ status|replace('_', ' ')|title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="flex items-center gap-2">
+        <span class="text-sm font-medium text-gray-700">Date:</span>
+        <select id="date-filter" onchange="handleDateFilter()"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+            <option value="">All Time</option>
+            <option value="7">Last 7 Days</option>
+            <option value="30">Last 30 Days</option>
+            <option value="90">Last 90 Days</option>
+            <optgroup label="By Month">
+                <option value="month-0">This Month</option>
+                <option value="month-1">Last Month</option>
+                <option value="month-2">2 Months Ago</option>
+                <option value="month-3">3 Months Ago</option>
+            </optgroup>
+            <option value="custom">Custom Range...</option>
+        </select>
+    </div>
+
+    <!-- Custom Date Range (hidden by default) -->
+    <div id="custom-date-range" class="hidden flex items-center gap-2">
+        <input type="date" id="date-from" onchange="filterQuotes()"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+        <span class="text-gray-500">to</span>
+        <input type="date" id="date-to" onchange="filterQuotes()"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+    </div>
+
+    <!-- Expand/Collapse All -->
+    <button onclick="toggleAll()" class="text-sm text-slate-700 hover:text-slate-900 underline">
+        Expand/Collapse All
+    </button>
+</div>
+
+<!-- Summary Stats -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="text-2xl font-bold text-gray-900">{{ quotes|length }}</div>
+        <div class="text-sm text-gray-500">Total Quotes</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="text-2xl font-bold text-green-600">${{ '{:,.0f}'.format(quotes|selectattr('status', 'eq', 'paid')|map(attribute='total')|sum) }}</div>
+        <div class="text-sm text-gray-500">Paid</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="text-2xl font-bold text-purple-600">${{ '{:,.0f}'.format(quotes|selectattr('status', 'eq', 'invoiced')|map(attribute='total')|sum) }}</div>
+        <div class="text-sm text-gray-500">Invoiced</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="text-2xl font-bold text-blue-600">${{ '{:,.0f}'.format(quotes|selectattr('status', 'in', ['sent', 'accepted'])|map(attribute='total')|sum) }}</div>
+        <div class="text-sm text-gray-500">Pending</div>
+    </div>
+</div>
+
+<!-- Grouped Quotes by Customer -->
+<div id="quotes-container" class="space-y-4">
+    {% set customers = quotes|groupby('customer_name') %}
+    {% for customer_name, customer_quotes in customers %}
+    {% set customer_total = customer_quotes|map(attribute='total')|sum %}
+    <div class="customer-group bg-white rounded-lg shadow overflow-hidden" data-customer="{{ (customer_name or 'No Customer')|lower }}">
+        <!-- Customer Header -->
+        <button onclick="toggleCustomer(this)"
+                class="w-full px-6 py-4 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-gray-400 transform transition-transform chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+                <div class="text-left">
+                    <h3 class="text-lg font-semibold text-gray-900">{{ customer_name or 'No Customer Assigned' }}</h3>
+                    {% if customer_quotes[0].customer_company %}
+                    <p class="text-sm text-gray-500">{{ customer_quotes[0].customer_company }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-lg font-bold text-gray-900">${{ '{:,.2f}'.format(customer_total) }}</div>
+                <div class="text-sm text-gray-500">{{ customer_quotes|length }} quote{{ 's' if customer_quotes|length > 1 else '' }}</div>
+            </div>
+        </button>
+
+        <!-- Customer Quotes -->
+        <div class="quotes-list">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quote #</th>
+                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for quote in customer_quotes|sort(attribute='created_at', reverse=true) %}
+                    <tr class="quote-row hover:bg-gray-50" data-status="{{ quote.status }}" data-search="{{ quote.quote_number|lower }} {{ quote.title|lower }}" data-date="{{ quote.quote_date or quote.created_at|format_date }}">
+                        <td class="px-6 py-3">
+                            <a href="/quotes/{{ quote.id }}" class="text-sm font-medium text-slate-800 hover:underline">
+                                {{ quote.quote_number }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-3">
+                            <div class="text-sm text-gray-900">{{ quote.title }}</div>
+                        </td>
+                        <td class="px-6 py-3">
+                            <div class="text-sm font-semibold text-gray-900">${{ '{:,.2f}'.format(quote.total or 0) }}</div>
+                        </td>
+                        <td class="px-6 py-3">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full
+                                {% if quote.status == 'draft' %}bg-gray-100 text-gray-800
+                                {% elif quote.status == 'sent' %}bg-blue-100 text-blue-800
+                                {% elif quote.status == 'accepted' %}bg-green-100 text-green-800
+                                {% elif quote.status == 'invoiced' %}bg-purple-100 text-purple-800
+                                {% elif quote.status == 'paid' %}bg-emerald-100 text-emerald-800
+                                {% elif quote.status == 'declined' %}bg-red-100 text-red-800
+                                {% elif quote.status == 'expired' %}bg-yellow-100 text-yellow-800
+                                {% endif %}">
+                                {{ quote.status|replace('_', ' ')|title }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3">
+                            <div class="text-sm text-gray-500">{{ quote.quote_date or quote.created_at|format_date }}</div>
+                        </td>
+                        <td class="px-6 py-3 text-sm">
+                            <a href="/quotes/{{ quote.id }}" class="text-slate-700 hover:text-slate-900 mr-2">View</a>
+                            <a href="/quotes/{{ quote.id }}/edit" class="text-slate-700 hover:text-slate-900 mr-2">Edit</a>
+                            <a href="/quotes/{{ quote.id }}/pdf" class="text-slate-700 hover:text-slate-900">PDF</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not quotes %}
+    <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+        No quotes yet. <a href="/quotes/add" class="text-slate-800 hover:underline">Create your first quote</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleCustomer(button) {
+    const group = button.closest('.customer-group');
+    const list = group.querySelector('.quotes-list');
+    const chevron = button.querySelector('.chevron');
+
+    if (list.style.display === 'none') {
+        list.style.display = 'block';
+        chevron.style.transform = 'rotate(0deg)';
+    } else {
+        list.style.display = 'none';
+        chevron.style.transform = 'rotate(-90deg)';
+    }
+}
+
+let allExpanded = true;
+function toggleAll() {
+    const lists = document.querySelectorAll('.quotes-list');
+    const chevrons = document.querySelectorAll('.chevron');
+
+    allExpanded = !allExpanded;
+
+    lists.forEach(list => {
+        list.style.display = allExpanded ? 'block' : 'none';
+    });
+
+    chevrons.forEach(chevron => {
+        chevron.style.transform = allExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+    });
+}
+
+function handleDateFilter() {
+    const dateFilter = document.getElementById('date-filter').value;
+    const customRange = document.getElementById('custom-date-range');
+
+    if (dateFilter === 'custom') {
+        customRange.classList.remove('hidden');
+        // Set default dates if empty
+        const today = new Date();
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+        if (!document.getElementById('date-from').value) {
+            document.getElementById('date-from').value = monthAgo.toISOString().split('T')[0];
+        }
+        if (!document.getElementById('date-to').value) {
+            document.getElementById('date-to').value = today.toISOString().split('T')[0];
+        }
+    } else {
+        customRange.classList.add('hidden');
+    }
+    filterQuotes();
+}
+
+function getDateRange() {
+    const dateFilter = document.getElementById('date-filter').value;
+
+    if (!dateFilter) return { start: null, end: null };
+
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    if (dateFilter === 'custom') {
+        const fromVal = document.getElementById('date-from').value;
+        const toVal = document.getElementById('date-to').value;
+        return {
+            start: fromVal ? new Date(fromVal) : null,
+            end: toVal ? new Date(toVal + 'T23:59:59') : null
+        };
+    }
+
+    if (dateFilter.startsWith('month-')) {
+        const monthsAgo = parseInt(dateFilter.split('-')[1]);
+        const start = new Date(today.getFullYear(), today.getMonth() - monthsAgo, 1);
+        const end = new Date(today.getFullYear(), today.getMonth() - monthsAgo + 1, 0, 23, 59, 59);
+        return { start, end };
+    }
+
+    // Days ago
+    const daysAgo = parseInt(dateFilter);
+    const start = new Date();
+    start.setDate(start.getDate() - daysAgo);
+    start.setHours(0, 0, 0, 0);
+    return { start, end: today };
+}
+
+function filterQuotes() {
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    const statusFilter = document.getElementById('status-filter').value;
+    const { start: startDate, end: endDate } = getDateRange();
+
+    document.querySelectorAll('.customer-group').forEach(group => {
+        const customerName = group.dataset.customer;
+        let hasVisibleQuotes = false;
+
+        group.querySelectorAll('.quote-row').forEach(row => {
+            const rowSearch = row.dataset.search;
+            const rowStatus = row.dataset.status;
+            const rowDate = row.dataset.date;
+
+            const matchesSearch = !searchTerm || customerName.includes(searchTerm) || rowSearch.includes(searchTerm);
+            const matchesStatus = !statusFilter || rowStatus === statusFilter;
+
+            let matchesDate = true;
+            if ((startDate || endDate) && rowDate) {
+                const quoteDate = new Date(rowDate);
+                if (startDate && quoteDate < startDate) matchesDate = false;
+                if (endDate && quoteDate > endDate) matchesDate = false;
+            }
+
+            if (matchesSearch && matchesStatus && matchesDate) {
+                row.style.display = '';
+                hasVisibleQuotes = true;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show/hide entire customer group
+        group.style.display = hasVisibleQuotes ? '' : 'none';
+
+        // Expand groups that match search
+        if (hasVisibleQuotes && searchTerm) {
+            group.querySelector('.quotes-list').style.display = 'block';
+            group.querySelector('.chevron').style.transform = 'rotate(0deg)';
+        }
+    });
+}
+</script>
+{% endblock %}

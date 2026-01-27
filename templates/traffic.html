@@ -1,0 +1,562 @@
+{% extends "base.html" %}
+
+{% block title %}Traffic Dashboard - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap justify-between items-start gap-4">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Website Traffic</h1>
+        <p class="mt-2 text-gray-600">
+            {% if traffic.is_demo %}
+            <span class="text-yellow-600 font-medium">Demo Data</span> - Connect Google Analytics to see real data
+            {% else %}
+            Sessions from {{ traffic.date_range.start }} to {{ traffic.date_range.end }}
+            {% endif %}
+        </p>
+    </div>
+    <div class="flex items-center gap-3">
+        {% if ga_connected %}
+        <!-- Website Selector -->
+        <select id="websiteSelect" onchange="switchWebsite(this.value)"
+                class="px-4 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-700 cursor-pointer">
+            {% for site in websites %}
+            <option value="{{ site.id }}" {{ 'selected' if current_website and current_website.id == site.id else '' }}>
+                {{ site.name }}
+            </option>
+            {% endfor %}
+            <option value="add_new">+ Add Website</option>
+        </select>
+        {% endif %}
+
+        {% if not ga_connected %}
+            {% if oauth_configured %}
+            <a href="/traffic/oauth/authorize" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex items-center gap-2">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Connect with Google
+            </a>
+            {% else %}
+            <a href="/traffic/settings" class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium text-sm">
+                Setup Google Analytics
+            </a>
+            {% endif %}
+        {% else %}
+        <a href="/traffic/settings" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">
+            GA Settings
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Date Filter Controls -->
+<div class="bg-white rounded-lg shadow p-4 mb-8">
+    <div class="flex flex-wrap items-center gap-4">
+        <span class="text-sm font-medium text-gray-700">Date Range:</span>
+
+        <!-- Quick Select Buttons -->
+        <div class="flex flex-wrap gap-2">
+            <a href="/traffic?period=7d{% if current_website %}&website={{ current_website.id }}{% endif %}" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if period == '7d' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                Last 7 Days
+            </a>
+            <a href="/traffic?period=30d{% if current_website %}&website={{ current_website.id }}{% endif %}" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if period == '30d' or not period else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                Last 30 Days
+            </a>
+            <a href="/traffic?period=90d{% if current_website %}&website={{ current_website.id }}{% endif %}" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if period == '90d' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                Last 90 Days
+            </a>
+            <a href="/traffic?period=ytd{% if current_website %}&website={{ current_website.id }}{% endif %}" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if period == 'ytd' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                Year to Date
+            </a>
+        </div>
+
+        <!-- Divider -->
+        <span class="text-gray-300">|</span>
+
+        <!-- Custom Date Range -->
+        <form method="GET" action="/traffic" class="flex items-center gap-2">
+            {% if current_website %}
+            <input type="hidden" name="website" value="{{ current_website.id }}">
+            {% endif %}
+            <input type="date" name="start_date" value="{{ start_date or '' }}"
+                   class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
+            <span class="text-gray-500">to</span>
+            <input type="date" name="end_date" value="{{ end_date or '' }}"
+                   class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
+            <button type="submit" class="px-3 py-1.5 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900">
+                Apply
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <!-- Total Sessions -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Total Sessions</p>
+                <p class="text-2xl font-semibold text-gray-900">{{ "{:,}".format(traffic.totals.sessions) }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Users -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Total Users</p>
+                <p class="text-2xl font-semibold text-gray-900">{{ "{:,}".format(traffic.totals.users) }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Users -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-slate-100 text-slate-800">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">New Users</p>
+                <p class="text-2xl font-semibold text-gray-900">{{ "{:,}".format(traffic.totals.new_users) }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sessions per User -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Sessions/User</p>
+                <p class="text-2xl font-semibold text-gray-900">
+                    {% if traffic.totals.users > 0 %}
+                    {{ "{:.2f}".format(traffic.totals.sessions / traffic.totals.users) }}
+                    {% else %}
+                    0
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone Clicks -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-red-100 text-red-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Phone Clicks</p>
+                <p class="text-2xl font-semibold text-gray-900">{{ "{:,}".format(phone_clicks) }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Sessions by Channel (Pie Chart) -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Sessions by Channel</h3>
+        <canvas id="sessionsByChannelChart" height="200"></canvas>
+        <div class="mt-4 pt-4 border-t text-center">
+            <span class="text-sm text-gray-500">Total Sessions: </span>
+            <span class="text-lg font-bold text-blue-600">{{ "{:,}".format(traffic.totals.sessions) }}</span>
+        </div>
+    </div>
+
+    <!-- Users by Channel (Pie Chart) -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Users by Channel</h3>
+        <canvas id="usersByChannelChart" height="200"></canvas>
+        <div class="mt-4 pt-4 border-t text-center">
+            <span class="text-sm text-gray-500">Total Users: </span>
+            <span class="text-lg font-bold text-green-600">{{ "{:,}".format(traffic.totals.users) }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Sessions by Month & Channel Bar Chart -->
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <div class="flex flex-wrap justify-between items-center mb-4">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900">Sessions by Month & Channel</h3>
+            <p class="text-sm text-gray-500">Monthly traffic breakdown by channel</p>
+        </div>
+        <div class="mt-2 sm:mt-0">
+            <select id="trafficYearSelect" onchange="loadTrafficForYear(this.value)"
+                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-700 cursor-pointer">
+                {% for yr in traffic_by_month.available_years %}
+                <option value="{{ yr }}" {{ 'selected' if yr == traffic_by_month.year else '' }}>{{ yr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div style="height: 400px;">
+        <canvas id="trafficByMonthChart"></canvas>
+    </div>
+    <div id="trafficChartLoading" class="hidden text-center py-4 text-gray-500">Loading...</div>
+</div>
+
+<!-- Channel Performance Table -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">Channel Performance</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Channel</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sessions</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Users</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">New Users</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bounce Rate</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Duration</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for channel in traffic.by_channel %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm font-medium text-gray-900">{{ channel.channel }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm font-semibold text-blue-600">{{ "{:,}".format(channel.sessions) }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ "{:,}".format(channel.users) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ "{:,}".format(channel.new_users) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm {{ 'text-green-600' if channel.bounce_rate < 40 else 'text-yellow-600' if channel.bounce_rate < 60 else 'text-red-600' }}">
+                            {{ channel.bounce_rate }}%
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ "{:.0f}".format(channel.avg_duration // 60) }}m {{ "{:.0f}".format(channel.avg_duration % 60) }}s
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not traffic.by_channel %}
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">No data available</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if traffic.is_demo %}
+<!-- Setup Instructions -->
+<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
+    <h3 class="text-lg font-semibold text-yellow-800 mb-4">Connect Google Analytics to See Real Data</h3>
+    <p class="text-yellow-700 mb-4">The data above is demo data. Follow these steps to connect your GA4 account:</p>
+    <ol class="list-decimal list-inside space-y-2 text-yellow-700">
+        <li>Go to <a href="https://console.cloud.google.com" target="_blank" class="underline">Google Cloud Console</a></li>
+        <li>Create a new project (or use existing)</li>
+        <li>Enable the "Google Analytics Data API"</li>
+        <li>Create a Service Account and download the JSON key</li>
+        <li>In GA4 Admin, add the Service Account email as a Viewer</li>
+        <li>Click "Connect Google Analytics" above to upload your credentials</li>
+    </ol>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Chart colors
+    const chartColors = [
+        'rgba(59, 130, 246, 0.8)',   // Blue - Organic Search
+        'rgba(16, 185, 129, 0.8)',   // Green - Paid Search
+        'rgba(107, 114, 128, 0.8)',  // Gray - Direct
+        'rgba(236, 72, 153, 0.8)',   // Pink - Paid Social
+        'rgba(139, 92, 246, 0.8)',   // Purple - Organic Social
+        'rgba(245, 158, 11, 0.8)',   // Yellow - Referral
+        'rgba(239, 68, 68, 0.8)',    // Red - Email
+        'rgba(20, 184, 166, 0.8)',   // Teal - Affiliates
+        'rgba(99, 102, 241, 0.8)',   // Indigo - Other
+    ];
+
+    // Channel data from server
+    const channelLabels = [{% for c in traffic.by_channel %}"{{ c.channel }}"{% if not loop.last %}, {% endif %}{% endfor %}];
+    const channelSessions = [{% for c in traffic.by_channel %}{{ c.sessions }}{% if not loop.last %}, {% endif %}{% endfor %}];
+    const channelUsers = [{% for c in traffic.by_channel %}{{ c.users }}{% if not loop.last %}, {% endif %}{% endfor %}];
+
+    // Sessions by Channel Pie Chart
+    const sessionsCtx = document.getElementById('sessionsByChannelChart').getContext('2d');
+    new Chart(sessionsCtx, {
+        type: 'pie',
+        data: {
+            labels: channelLabels,
+            datasets: [{
+                data: channelSessions,
+                backgroundColor: chartColors
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ${value.toLocaleString()} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((element, index) => {
+                        const data = dataset.data[index];
+                        if (data > 0) {
+                            const total = dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((data / total) * 100).toFixed(0);
+                            if (percentage >= 5) {  // Only show label if >= 5%
+                                const position = element.tooltipPosition();
+                                const label = chart.data.labels[index];
+                                ctx.fillStyle = '#fff';
+                                ctx.font = 'bold 11px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                // Show channel name on top, number below
+                                ctx.fillText(label, position.x, position.y - 7);
+                                ctx.font = '10px Arial';
+                                ctx.fillText(data.toLocaleString(), position.x, position.y + 7);
+                            }
+                        }
+                    });
+                });
+            }
+        }]
+    });
+
+    // Users by Channel Pie Chart
+    const usersCtx = document.getElementById('usersByChannelChart').getContext('2d');
+    new Chart(usersCtx, {
+        type: 'pie',
+        data: {
+            labels: channelLabels,
+            datasets: [{
+                data: channelUsers,
+                backgroundColor: chartColors
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ${value.toLocaleString()} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((element, index) => {
+                        const data = dataset.data[index];
+                        if (data > 0) {
+                            const total = dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((data / total) * 100).toFixed(0);
+                            if (percentage >= 5) {
+                                const position = element.tooltipPosition();
+                                const label = chart.data.labels[index];
+                                ctx.fillStyle = '#fff';
+                                ctx.font = 'bold 11px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                // Show channel name on top, number below
+                                ctx.fillText(label, position.x, position.y - 7);
+                                ctx.font = '10px Arial';
+                                ctx.fillText(data.toLocaleString(), position.x, position.y + 7);
+                            }
+                        }
+                    });
+                });
+            }
+        }]
+    });
+
+    // Sessions by Month & Channel Bar Chart
+    let currentTrafficYear = '{{ traffic_by_month.year }}';
+    let trafficChartInstance = null;
+    let currentTrafficData = {
+        months: [{% for m in traffic_by_month.months %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        month_names: [{% for m in traffic_by_month.month_names %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        channels: [{% for c in traffic_by_month.channels %}"{{ c }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        data: {{ traffic_by_month.data | tojson }},
+        totals: {{ traffic_by_month.totals | tojson }}
+    };
+
+    function createTrafficChart(data) {
+        const ctx = document.getElementById('trafficByMonthChart').getContext('2d');
+
+        if (trafficChartInstance) {
+            trafficChartInstance.destroy();
+        }
+
+        const datasets = data.channels.map((channel, index) => ({
+            label: channel,
+            data: data.data[channel] || [],
+            backgroundColor: chartColors[index % chartColors.length],
+            borderColor: chartColors[index % chartColors.length].replace('0.8', '1'),
+            borderWidth: 1
+        }));
+
+        trafficChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.month_names,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const monthIndex = context[0].dataIndex;
+                                return data.month_names[monthIndex] + ' ' + currentTrafficYear + ' (Total: ' + data.totals[monthIndex].toLocaleString() + ' sessions)';
+                            },
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw.toLocaleString()} sessions`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        grace: '15%',
+                        title: {
+                            display: true,
+                            text: 'Sessions'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.labels.forEach((label, index) => {
+                        const total = data.totals[index];
+                        if (total > 0) {
+                            const meta = chart.getDatasetMeta(chart.data.datasets.length - 1);
+                            const bar = meta.data[index];
+                            if (bar) {
+                                const x = bar.x;
+                                const y = bar.y - 8;
+                                ctx.save();
+                                ctx.fillStyle = '#374151';
+                                ctx.font = 'bold 11px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(total.toLocaleString(), x, y);
+                                ctx.restore();
+                            }
+                        }
+                    });
+                }
+            }]
+        });
+    }
+
+    // Get current website ID
+    const currentWebsiteId = '{{ current_website.id if current_website else "" }}';
+
+    async function loadTrafficForYear(year) {
+        document.getElementById('trafficYearSelect').value = year;
+        document.getElementById('trafficChartLoading').classList.remove('hidden');
+
+        try {
+            let url = '/api/traffic/by-year/' + year;
+            if (currentWebsiteId) {
+                url += '?website=' + currentWebsiteId;
+            }
+            const response = await fetch(url);
+            const data = await response.json();
+            currentTrafficYear = year;
+            currentTrafficData = data;
+            createTrafficChart(data);
+        } catch (error) {
+            console.error('Error loading traffic data:', error);
+        }
+
+        document.getElementById('trafficChartLoading').classList.add('hidden');
+    }
+
+    function switchWebsite(websiteId) {
+        if (websiteId === 'add_new') {
+            // Go to settings page to add new website
+            window.location.href = '/traffic/settings';
+            return;
+        }
+        // Preserve current period/date filters when switching websites
+        const url = new URL(window.location.href);
+        url.searchParams.set('website', websiteId);
+        window.location.href = url.toString();
+    }
+
+    // Initialize chart
+    createTrafficChart(currentTrafficData);
+</script>
+{% endblock %}

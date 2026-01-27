@@ -1,0 +1,33 @@
+# Secrets - NEVER upload these
+.env
+oauth_secrets.json
+ga_config.json
+outlook_config.json
+*_secrets.json
+*_config.json
+
+# Database files
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.Python
+venv/
+env/
+.venv/
+
+# Backups
+*_backup*.db
+*_backup*.csv
+OOB_backup/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}{{ quote.quote_number }} - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <a href="/quotes" class="text-slate-800 hover:text-slate-900 text-sm">&larr; Back to Quotes</a>
+    <div class="flex gap-2">
+        <a href="/quotes/{{ quote.id }}/pdf" class="border border-slate-800 text-slate-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+            Download PDF
+        </a>
+        <a href="/quotes/{{ quote.id }}/edit" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900">
+            Edit Quote
+        </a>
+    </div>
+</div>
+
+<!-- Quote Header -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="px-8 py-6 gradient-bg">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-white">{{ quote.quote_number }}</h1>
+                <p class="text-white text-opacity-80 mt-1">{{ quote.title }}</p>
+            </div>
+            <span class="px-4 py-2 rounded-full text-sm font-bold
+                {% if quote.status == 'draft' %}bg-gray-100 text-gray-800
+                {% elif quote.status == 'sent' %}bg-blue-100 text-blue-800
+                {% elif quote.status == 'accepted' %}bg-green-100 text-green-800
+                {% elif quote.status == 'invoiced' %}bg-purple-100 text-purple-800
+                {% elif quote.status == 'paid' %}bg-emerald-100 text-emerald-800
+                {% elif quote.status == 'declined' %}bg-red-100 text-red-800
+                {% elif quote.status == 'expired' %}bg-yellow-100 text-yellow-800{% endif %}">
+                {{ quote.status|replace('_', ' ')|upper }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Progress Flow -->
+    <div class="px-8 py-4 bg-gray-50 border-t">
+        <div class="flex items-center justify-between max-w-2xl mx-auto">
+            {% set flow_statuses = ['draft', 'sent', 'accepted', 'invoiced', 'paid'] %}
+            {% set current_index = flow_statuses.index(quote.status) if quote.status in flow_statuses else -1 %}
+            {% for status in flow_statuses %}
+            <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                    {% if quote.status == status %}bg-slate-800 text-white ring-4 ring-slate-200
+                    {% elif current_index >= 0 and flow_statuses.index(status) < current_index %}bg-green-500 text-white
+                    {% else %}bg-gray-200 text-gray-500{% endif %}">
+                    {% if current_index >= 0 and flow_statuses.index(status) < current_index %}
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    {% else %}
+                    {{ loop.index }}
+                    {% endif %}
+                </div>
+                <span class="text-xs mt-1 {% if quote.status == status %}font-bold text-slate-800{% else %}text-gray-500{% endif %}">
+                    {{ status|title }}
+                </span>
+            </div>
+            {% if not loop.last %}
+            <div class="flex-1 h-1 mx-2 {% if current_index >= 0 and flow_statuses.index(status) < current_index %}bg-green-500{% else %}bg-gray-200{% endif %}"></div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% if quote.status in ['declined', 'expired'] %}
+        <p class="text-center text-sm text-red-600 mt-2">This quote has been {{ quote.status }}.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Customer & Quote Info -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+                <!-- Customer Info -->
+                <div class="p-6">
+                    <h3 class="text-sm font-medium text-gray-500 uppercase mb-3">Bill To</h3>
+                    <div class="space-y-1">
+                        <div class="text-lg font-semibold text-gray-900">{{ quote.customer_name or 'No customer specified' }}</div>
+                        {% if quote.customer_company %}
+                        <div class="text-gray-600">{{ quote.customer_company }}</div>
+                        {% endif %}
+                        {% if quote.customer_email %}
+                        <div class="text-gray-600">{{ quote.customer_email }}</div>
+                        {% endif %}
+                        {% if quote.customer_phone %}
+                        <div class="text-gray-600">{{ quote.customer_phone }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Quote Info -->
+                <div class="p-6">
+                    <h3 class="text-sm font-medium text-gray-500 uppercase mb-3">Quote Details</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Quote Date:</span>
+                            <span class="font-medium">{{ quote.quote_date|format_date if quote.quote_date else 'Not set' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Valid Until:</span>
+                            <span class="font-medium">{{ quote.expiry_date|format_date if quote.expiry_date else 'No expiry' }}</span>
+                        </div>
+                        {% if quote.salesperson_name %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Prepared By:</span>
+                            <span class="font-medium">{{ quote.salesperson_name }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line Items -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-6 py-4 border-b bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">Line Items</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Qty</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Unit Price</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Discount</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for item in quote.line_items %}
+                        <tr>
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-medium text-gray-900">{{ item.product_name }}</div>
+                                {% if item.product_sku %}
+                                <div class="text-xs text-gray-500">SKU: {{ item.product_sku }}</div>
+                                {% endif %}
+                                {% if item.description %}
+                                <div class="text-xs text-gray-500 mt-1">{{ item.description }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-center text-sm text-gray-900">{{ item.quantity|int }}</td>
+                            <td class="px-6 py-4 text-right text-sm text-gray-900">${{ '{:,.2f}'.format(item.unit_price) }}</td>
+                            <td class="px-6 py-4 text-center text-sm text-gray-500">
+                                {% if item.discount_percent > 0 %}{{ item.discount_percent }}%{% else %}-{% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-right text-sm font-medium text-gray-900">${{ '{:,.2f}'.format(item.line_total) }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not quote.line_items %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                No items in this quote.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Totals -->
+            <div class="px-6 py-4 bg-gray-50 border-t">
+                <div class="max-w-xs ml-auto space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Subtotal</span>
+                        <span class="font-medium">${{ '{:,.2f}'.format(quote.subtotal or 0) }}</span>
+                    </div>
+                    {% if quote.discount_percent > 0 %}
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Discount ({{ quote.discount_percent }}%)</span>
+                        <span class="text-red-600">-${{ '{:,.2f}'.format(quote.discount_amount or 0) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if quote.tax_percent > 0 %}
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Tax ({{ quote.tax_percent }}%)</span>
+                        <span class="font-medium">${{ '{:,.2f}'.format(quote.tax_amount or 0) }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex justify-between text-xl font-bold border-t pt-2">
+                        <span>Total</span>
+                        <span class="text-slate-800">${{ '{:,.2f}'.format(quote.total or 0) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes & Terms -->
+        {% if quote.notes or quote.terms %}
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            {% if quote.notes %}
+            <div class="p-6 {% if quote.terms %}border-b{% endif %}">
+                <h3 class="text-sm font-medium text-gray-500 uppercase mb-2">Notes</h3>
+                <p class="text-gray-700 whitespace-pre-wrap">{{ quote.notes }}</p>
+            </div>
+            {% endif %}
+            {% if quote.terms %}
+            <div class="p-6">
+                <h3 class="text-sm font-medium text-gray-500 uppercase mb-2">Terms & Conditions</h3>
+                <p class="text-gray-700 whitespace-pre-wrap">{{ quote.terms }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="space-y-6">
+        <!-- Payment Link -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-6 py-4 border-b bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">Payment</h2>
+            </div>
+            <div class="p-6">
+                {% if quote.status == 'paid' %}
+                <div class="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-3">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="font-medium">Paid{% if quote.payment_date %} on {{ quote.payment_date|format_date }}{% endif %}</span>
+                </div>
+                {% else %}
+                {% if quote.payment_link %}
+                <div class="space-y-3">
+                    <a href="{{ quote.payment_link }}" target="_blank"
+                       class="block w-full text-center bg-green-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-700">
+                        💳 Pay Now - ${{ '{:,.2f}'.format(quote.total or 0) }}
+                    </a>
+                    <div class="text-xs text-gray-500">
+                        <p class="font-medium mb-1">Payment Link:</p>
+                        <p class="break-all bg-gray-100 p-2 rounded">{{ quote.payment_link }}</p>
+                    </div>
+                </div>
+                {% else %}
+                <form action="/quotes/{{ quote.id }}/payment-link" method="POST" class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Paste Stripe/Payment Link</label>
+                        <input type="url" name="payment_link" placeholder="https://buy.stripe.com/..."
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700">
+                        Add Payment Link
+                    </button>
+                </form>
+                <p class="text-xs text-gray-500 mt-3">
+                    Create a payment link in <a href="https://dashboard.stripe.com/payment-links" target="_blank" class="text-blue-600 hover:underline">Stripe Dashboard</a> and paste it here.
+                </p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Status Update -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-6 py-4 border-b bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">Update Status</h2>
+            </div>
+            <div class="p-6">
+                <form action="/quotes/{{ quote.id }}/status" method="POST" class="space-y-3">
+                    <select name="status" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        {% for status in statuses %}
+                        <option value="{{ status }}" {{ 'selected' if quote.status == status else '' }}>
+                            {{ status|replace('_', ' ')|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="w-full bg-slate-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-900">
+                        Update Status
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Salesperson Info -->
+        {% if quote.salesperson_name %}
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-6 py-4 border-b bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">Salesperson</h2>
+            </div>
+            <div class="p-6">
+                <div class="font-semibold text-gray-900">{{ quote.salesperson_name }}</div>
+                {% if quote.salesperson_email %}
+                <a href="mailto:{{ quote.salesperson_email }}" class="text-sm text-slate-800 hover:underline block mt-1">
+                    {{ quote.salesperson_email }}
+                </a>
+                {% endif %}
+                {% if quote.salesperson_phone %}
+                <a href="tel:{{ quote.salesperson_phone }}" class="text-sm text-slate-800 hover:underline block mt-1">
+                    {{ quote.salesperson_phone }}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Metadata -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-6 py-4 border-b bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">Details</h2>
+            </div>
+            <div class="p-6 space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Created:</span>
+                    <span class="font-medium">{{ quote.created_at|format_date }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Last Updated:</span>
+                    <span class="font-medium">{{ quote.updated_at|format_date }}</span>
+                </div>
+                {% if quote.deal_id %}
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Linked Deal:</span>
+                    <a href="/deals/{{ quote.deal_id }}" class="text-slate-800 hover:underline font-medium">View Deal</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-6 space-y-3">
+                <a href="/quotes/{{ quote.id }}/pdf" class="block w-full text-center bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700">
+                    Download PDF
+                </a>
+                <a href="/quotes/{{ quote.id }}/edit" class="block w-full text-center bg-slate-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-900">
+                    Edit Quote
+                </a>
+                <form action="/quotes/{{ quote.id }}/delete" method="POST"
+                      onsubmit="return confirm('Are you sure you want to delete this quote?');">
+                    <button type="submit" class="w-full text-center border border-red-300 text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-red-50">
+                        Delete Quote
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

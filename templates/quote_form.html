@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}New Quote - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/quotes" class="text-slate-800 hover:text-slate-900 text-sm">&larr; Back to Quotes</a>
+</div>
+
+<div class="max-w-3xl mx-auto">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b gradient-bg">
+            <h1 class="text-2xl font-bold text-white">New Quote</h1>
+        </div>
+
+        {% if error %}
+        <div class="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" class="p-6 space-y-6">
+            <!-- Quote Title -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Quote Title *</label>
+                <input type="text" name="title" required
+                       value="{{ prefill.title if prefill else '' }}"
+                       placeholder="e.g., Steel Supply Quote for ABC Corp"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+            </div>
+
+            <!-- Salesperson -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prepared By (Salesperson) *</label>
+                <select name="salesperson_id" required id="salesperson-select"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    <option value="">Select salesperson...</option>
+                    {% for sp in salespeople %}
+                    <option value="{{ sp.id }}" data-email="{{ sp.email }}" data-phone="{{ sp.phone }}">
+                        {{ sp.name }}{% if sp.email %} ({{ sp.email }}){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Salesperson contact info will be auto-filled on the quote</p>
+            </div>
+
+            <!-- Company Selection - Prominent Section -->
+            <div class="border-t pt-6">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Company *</label>
+
+                    <!-- Existing Company Selector -->
+                    <select name="company_id" id="company-select"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-slate-700 mb-3">
+                        <option value="">-- Select existing company or add new below --</option>
+                        {% for company in companies %}
+                        <option value="{{ company.id }}">{{ company.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Or Add New Company -->
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-sm text-gray-500">or</span>
+                        <div class="flex-1 border-t border-gray-300"></div>
+                    </div>
+                    <input type="text" name="new_company_name" id="new-company-input"
+                           placeholder="Enter new company name..."
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    <p class="text-xs text-gray-500 mt-2">Select an existing company above, or type a new company name. This will be linked to the deal.</p>
+                </div>
+            </div>
+
+            <!-- Customer Contact Info -->
+            <div class="border-t pt-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Customer Contact</h3>
+
+                <!-- Searchable contact selector -->
+                <div class="mb-4 relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Search existing contacts (optional):</label>
+                    <input type="hidden" name="contact_id" id="contact-id-input" value="{{ prefill.contact_id if prefill and prefill.contact_id else '' }}">
+                    <input type="text" id="contact-search"
+                           placeholder="Type to search by name or email..."
+                           autocomplete="off"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    <div id="contact-results" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto hidden shadow-lg">
+                        <!-- Search results will appear here -->
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Select a contact to auto-fill info below, or enter manually</p>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                        <input type="text" name="customer_first_name" id="customer-first-name"
+                               placeholder="John"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                        <input type="text" name="customer_last_name" id="customer-last-name"
+                               placeholder="Smith"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" name="customer_email" id="customer-email"
+                               placeholder="customer@example.com"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <input type="tel" name="customer_phone" id="customer-phone"
+                               placeholder="(555) 123-4567"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lead Source (UTM) - Auto-populated from URL parameters -->
+            <div class="border-t pt-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Lead Source <span id="utm-auto-badge" class="hidden text-xs bg-green-100 text-green-700 px-2 py-1 rounded ml-2">Auto-filled from URL</span></h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                        <input type="text" name="utm_source" id="utm-source" list="source-options"
+                               placeholder="e.g., google, facebook, youtube"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        <datalist id="source-options">
+                            <option value="google">
+                            <option value="facebook">
+                            <option value="youtube">
+                            <option value="bing">
+                            <option value="instagram">
+                            <option value="linkedin">
+                            <option value="twitter">
+                            <option value="tiktok">
+                            <option value="newsletter">
+                            <option value="trade_show">
+                        </datalist>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Medium</label>
+                        <input type="text" name="utm_medium" id="utm-medium" list="medium-options"
+                               placeholder="e.g., cpc, organic, social"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        <datalist id="medium-options">
+                            <option value="cpc">
+                            <option value="organic">
+                            <option value="social">
+                            <option value="email">
+                            <option value="referral">
+                            <option value="direct">
+                            <option value="display">
+                            <option value="video">
+                            <option value="affiliate">
+                        </datalist>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
+                        <input type="text" name="utm_campaign" id="utm-campaign"
+                               placeholder="e.g., spring_sale, brand"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Auto-populated from URL parameters (utm_source, utm_medium, utm_campaign) or enter manually.</p>
+
+                <!-- Customer Reported Source -->
+                <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <label class="block text-sm font-medium text-blue-800 mb-2">"How did you hear about us?"</label>
+                    <input type="text" name="reported_source" id="reported-source"
+                           placeholder="Type what the customer says... (e.g., 'Saw your YouTube video', 'Friend referred me')"
+                           class="w-full border border-blue-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-xs text-blue-600 mt-1">Record exactly what the customer tells you - this helps verify lead sources.</p>
+                </div>
+            </div>
+
+            <!-- Dates - Auto-populated -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quote Date</label>
+                    <input type="date" name="quote_date" id="quote_date"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700 bg-gray-50">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Valid Until (30 days)</label>
+                    <input type="date" name="expiry_date" id="expiry_date"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700 bg-gray-50">
+                </div>
+            </div>
+
+            <!-- Deal info notice -->
+            {% if prefill and prefill.from_existing_deal %}
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <p class="text-sm font-medium text-green-800">Linking to existing deal</p>
+                        <p class="text-sm text-green-700 mt-1">This quote will be linked to the deal you came from. The deal value will update as you add products.</p>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" name="deal_id" value="{{ prefill.deal_id }}">
+            {% else %}
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <p class="text-sm font-medium text-blue-800">A deal will be created automatically</p>
+                        <p class="text-sm text-blue-700 mt-1">When you create this quote, a new deal will be added to your pipeline in the "New Deal" stage. The deal value will update as you add products to the quote.</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Submit -->
+            <div class="flex gap-4 pt-4 border-t">
+                <button type="submit" class="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700">
+                    Create Quote & Add Products
+                </button>
+                <a href="/quotes" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-center">
+                    Cancel
+                </a>
+            </div>
+            <p class="text-sm text-gray-500 text-center mt-2">After creating the quote, you'll be able to add products and calculate shipping.</p>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Auto-populate dates and UTM params on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const thirtyDaysLater = new Date(today);
+        thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+
+        // Format as YYYY-MM-DD
+        const formatDate = (date) => date.toISOString().split('T')[0];
+
+        document.getElementById('quote_date').value = formatDate(today);
+        document.getElementById('expiry_date').value = formatDate(thirtyDaysLater);
+
+        // Auto-populate UTM parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        let utmFound = false;
+
+        const utmSource = urlParams.get('utm_source');
+        const utmMedium = urlParams.get('utm_medium');
+        const utmCampaign = urlParams.get('utm_campaign');
+
+        if (utmSource) {
+            document.getElementById('utm-source').value = utmSource;
+            utmFound = true;
+        }
+        if (utmMedium) {
+            document.getElementById('utm-medium').value = utmMedium;
+            utmFound = true;
+        }
+        if (utmCampaign) {
+            document.getElementById('utm-campaign').value = utmCampaign;
+            utmFound = true;
+        }
+
+        // Show badge if UTM params were auto-filled
+        if (utmFound) {
+            document.getElementById('utm-auto-badge').classList.remove('hidden');
+        }
+    });
+
+    // Company selector - clear one when the other is used
+    document.getElementById('company-select').addEventListener('change', function() {
+        if (this.value) {
+            document.getElementById('new-company-input').value = '';
+        }
+    });
+
+    document.getElementById('new-company-input').addEventListener('input', function() {
+        if (this.value.trim()) {
+            document.getElementById('company-select').value = '';
+        }
+    });
+
+    // Form validation - require either existing company or new company
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const companySelect = document.getElementById('company-select').value;
+        const newCompany = document.getElementById('new-company-input').value.trim();
+
+        if (!companySelect && !newCompany) {
+            e.preventDefault();
+            alert('Please select an existing company or enter a new company name.');
+            return false;
+        }
+    });
+
+    // Contacts data for search (includes UTM data)
+    const contactsData = [
+        {% for contact in contacts %}
+        {
+            id: {{ contact.id }},
+            firstName: "{{ contact.first_name }}",
+            lastName: "{{ contact.last_name }}",
+            name: "{{ contact.first_name }} {{ contact.last_name }}",
+            email: "{{ contact.email }}",
+            phone: "{{ contact.phone or '' }}",
+            utmSource: "{{ contact.utm_source or '' }}",
+            utmMedium: "{{ contact.utm_medium or '' }}",
+            utmCampaign: "{{ contact.utm_campaign or '' }}"
+        }{{ ',' if not loop.last else '' }}
+        {% endfor %}
+    ];
+
+    // Contact search functionality
+    const contactSearch = document.getElementById('contact-search');
+    const contactResults = document.getElementById('contact-results');
+    const contactIdInput = document.getElementById('contact-id-input');
+
+    contactSearch.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        if (query.length < 1) {
+            contactResults.classList.add('hidden');
+            return;
+        }
+
+        const matches = contactsData.filter(c =>
+            c.name.toLowerCase().includes(query) ||
+            c.email.toLowerCase().includes(query)
+        ).slice(0, 10); // Limit to 10 results
+
+        if (matches.length === 0) {
+            contactResults.innerHTML = '<div class="px-4 py-3 text-gray-500 text-sm">No contacts found</div>';
+        } else {
+            contactResults.innerHTML = matches.map(c => `
+                <div class="px-4 py-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                     onclick="selectContact(${c.id}, '${c.firstName.replace(/'/g, "\\'")}', '${c.lastName.replace(/'/g, "\\'")}', '${c.email}', '${c.phone.replace(/'/g, "\\'")}', '${c.utmSource.replace(/'/g, "\\'")}', '${c.utmMedium.replace(/'/g, "\\'")}', '${c.utmCampaign.replace(/'/g, "\\'")}')">
+                    <div class="font-medium text-gray-900">${c.name}</div>
+                    <div class="text-sm text-gray-500">${c.email}</div>
+                </div>
+            `).join('');
+        }
+        contactResults.classList.remove('hidden');
+    });
+
+    // Hide results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!contactSearch.contains(e.target) && !contactResults.contains(e.target)) {
+            contactResults.classList.add('hidden');
+        }
+    });
+
+    // Select a contact from search results
+    function selectContact(id, firstName, lastName, email, phone, utmSource, utmMedium, utmCampaign) {
+        contactIdInput.value = id;
+        contactSearch.value = firstName + ' ' + lastName + ' (' + email + ')';
+        document.getElementById('customer-first-name').value = firstName;
+        document.getElementById('customer-last-name').value = lastName;
+        document.getElementById('customer-email').value = email;
+        document.getElementById('customer-phone').value = phone;
+
+        // Auto-fill UTM fields from contact (only if contact has them and form fields are empty)
+        const utmSourceField = document.getElementById('utm-source');
+        const utmMediumField = document.getElementById('utm-medium');
+        const utmCampaignField = document.getElementById('utm-campaign');
+
+        if (utmSource && !utmSourceField.value) {
+            utmSourceField.value = utmSource;
+        }
+        if (utmMedium && !utmMediumField.value) {
+            utmMediumField.value = utmMedium;
+        }
+        if (utmCampaign && !utmCampaignField.value) {
+            utmCampaignField.value = utmCampaign;
+        }
+
+        contactResults.classList.add('hidden');
+    }
+
+    // Clear contact selection if search is manually cleared
+    contactSearch.addEventListener('blur', function() {
+        if (!this.value.trim()) {
+            contactIdInput.value = '';
+        }
+    });
+
+    // Pre-fill contact search if contact_id is already set (from deal)
+    if (contactIdInput.value) {
+        const prefillContact = contactsData.find(c => c.id == contactIdInput.value);
+        if (prefillContact) {
+            contactSearch.value = prefillContact.name + ' (' + prefillContact.email + ')';
+        }
+    }
+
+</script>
+{% endblock %}

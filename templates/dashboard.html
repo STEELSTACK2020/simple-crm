@@ -1,0 +1,1132 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Simple CRM{% endblock %}
+
+{% block content %}
+<!-- Quick Notes - Sticky Scratchpad -->
+<div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+    <div class="flex justify-between items-center mb-2">
+        <h3 class="text-sm font-bold text-yellow-800">Quick Notes</h3>
+        <span id="notes-status" class="text-xs text-yellow-600"></span>
+    </div>
+    <textarea id="quick-notes" rows="3"
+              placeholder="Jot down notes, reminders, things to do..."
+              class="w-full border border-yellow-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-white resize-none">{{ quick_notes or '' }}</textarea>
+</div>
+
+<div class="mb-6 flex flex-wrap justify-between items-start gap-4">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="mt-2 text-gray-600">
+            {% if analytics.is_filtered %}
+            Showing data for deals closed: {{ analytics.filter_start }} to {{ analytics.filter_end }}
+            {% else %}
+            Overview of your contacts and revenue (all time)
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Date Filter Controls -->
+<div class="bg-white rounded-lg shadow p-4 mb-8">
+    <div class="flex flex-wrap items-center gap-4">
+        <span class="text-sm font-medium text-gray-700">Filter by Close Date:</span>
+
+        <!-- Quick Select Buttons -->
+        <div class="flex flex-wrap gap-2">
+            <a href="/" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if not analytics.is_filtered else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                All Time
+            </a>
+            <a href="/?period=2024" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start == '2024-01-01' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                2024
+            </a>
+            <a href="/?period=2025" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start == '2025-01-01' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                2025
+            </a>
+            <a href="/?period=2026" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start == '2026-01-01' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                2026
+            </a>
+        </div>
+
+        <!-- Divider -->
+        <span class="text-gray-300">|</span>
+
+        <!-- Month Quick Select -->
+        <div class="flex items-center gap-2">
+            <select id="monthSelect" class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                <option value="">Select Month...</option>
+                <option value="2025-01">Jan 2025</option>
+                <option value="2025-02">Feb 2025</option>
+                <option value="2025-03">Mar 2025</option>
+                <option value="2025-04">Apr 2025</option>
+                <option value="2025-05">May 2025</option>
+                <option value="2025-06">Jun 2025</option>
+                <option value="2025-07">Jul 2025</option>
+                <option value="2025-08">Aug 2025</option>
+                <option value="2025-09">Sep 2025</option>
+                <option value="2025-10">Oct 2025</option>
+                <option value="2025-11">Nov 2025</option>
+                <option value="2025-12">Dec 2025</option>
+                <option value="2026-01">Jan 2026</option>
+                <option value="2026-02">Feb 2026</option>
+                <option value="2026-03">Mar 2026</option>
+                <option value="2026-04">Apr 2026</option>
+                <option value="2026-05">May 2026</option>
+                <option value="2026-06">Jun 2026</option>
+                <option value="2026-07">Jul 2026</option>
+                <option value="2026-08">Aug 2026</option>
+                <option value="2026-09">Sep 2026</option>
+                <option value="2026-10">Oct 2026</option>
+                <option value="2026-11">Nov 2026</option>
+                <option value="2026-12">Dec 2026</option>
+            </select>
+            <button onclick="applyMonthFilter()" class="px-3 py-1.5 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900">
+                Go
+            </button>
+        </div>
+
+        <!-- Divider -->
+        <span class="text-gray-300">|</span>
+
+        <!-- Custom Date Range -->
+        <form method="GET" action="/" class="flex items-center gap-2">
+            <input type="date" name="start_date" value="{{ analytics.filter_start or '' }}"
+                   class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
+            <span class="text-gray-500">to</span>
+            <input type="date" name="end_date" value="{{ analytics.filter_end or '' }}"
+                   class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
+            <button type="submit" class="px-3 py-1.5 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900">
+                Apply
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Save/Load filter preferences
+(function() {
+    const STORAGE_KEY = 'dashboardFilterPrefs';
+    const currentUrl = window.location.href;
+    const hasFilters = window.location.search.length > 0;
+
+    // If page has filters, save them
+    if (hasFilters) {
+        localStorage.setItem(STORAGE_KEY, window.location.search);
+    }
+
+    // If no filters in URL, check for saved preference and redirect
+    if (!hasFilters) {
+        const savedFilter = localStorage.getItem(STORAGE_KEY);
+        if (savedFilter && savedFilter.length > 0) {
+            window.location.href = '/' + savedFilter;
+        }
+    }
+
+    // Intercept "All Time" link to clear saved preference
+    document.querySelectorAll('a[href="/"]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            localStorage.removeItem(STORAGE_KEY);
+        });
+    });
+})();
+
+function applyMonthFilter() {
+    const month = document.getElementById('monthSelect').value;
+    if (month) {
+        window.location.href = '/?period=' + month;
+    }
+}
+</script>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <!-- Total Deals -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Total Deals</p>
+                <p class="text-2xl font-semibold text-gray-900">{{ analytics.total_deals }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Won Revenue -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Won Revenue</p>
+                <p class="text-2xl font-semibold text-gray-900">${{ "{:,.0f}".format(analytics.total_deal_value) }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pipeline Value -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100 text-slate-800">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Pipeline Value</p>
+                <p class="text-2xl font-semibold text-gray-900">${{ "{:,.0f}".format(analytics.pipeline_value) }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Closed Won -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-teal-100 text-teal-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Deals Won</p>
+                <p class="text-2xl font-semibold text-gray-900">{{ analytics.closed_deals }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Avg Deal Value -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Avg Deal Size</p>
+                <p class="text-2xl font-semibold text-gray-900">${{ "{:,.0f}".format(analytics.average_deal_value) }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leads Needing Attention Widget -->
+{% if untouched_leads %}
+<div class="bg-white rounded-lg shadow overflow-hidden mb-8 border-l-4 border-red-500">
+    <div class="px-6 py-4 border-b bg-red-50 flex justify-between items-center">
+        <div>
+            <h3 class="text-lg font-semibold text-red-800">Leads Needing Attention</h3>
+            <p class="text-sm text-red-600">No emails sent, no notes added - these leads need follow-up!</p>
+        </div>
+        <span class="bg-red-600 text-white text-lg font-bold px-3 py-1 rounded-full">{{ untouched_leads|length }}</span>
+    </div>
+    <div class="max-h-64 overflow-y-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 sticky top-0">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Added</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for lead in untouched_leads %}
+                <tr class="hover:bg-red-50">
+                    <td class="px-4 py-3">
+                        <a href="/contacts/{{ lead.id }}" class="text-sm font-medium text-gray-900 hover:text-red-600">
+                            {{ lead.first_name }} {{ lead.last_name }}
+                        </a>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.email }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.phone or '-' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.created_at|format_date if lead.created_at else '-' }}</td>
+                    <td class="px-4 py-3">
+                        <a href="/contacts/{{ lead.id }}" class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">
+                            Follow Up
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="px-6 py-3 bg-gray-50 border-t">
+        <a href="/contacts" class="text-sm text-red-600 hover:text-red-800 font-medium">View all contacts →</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Year-over-Year Comparison -->
+{% if comparison.by_year %}
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Year-over-Year Comparison</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ comparison.by_year|length if comparison.by_year|length <= 4 else 4 }} gap-4">
+        {% for year_data in comparison.by_year %}
+        <div class="border rounded-lg p-4 {{ 'bg-green-50 border-green-200' if loop.first else 'bg-gray-50' }}">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-2xl font-bold {{ 'text-green-700' if loop.first else 'text-gray-700' }}">{{ year_data.year }}</span>
+                {% if loop.first %}
+                <span class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">Latest</span>
+                {% endif %}
+            </div>
+            <div class="space-y-2">
+                <div>
+                    <span class="text-sm text-gray-500">Revenue</span>
+                    <p class="text-xl font-semibold text-gray-900">${{ "{:,.0f}".format(year_data.total_revenue) }}</p>
+                </div>
+                <div class="flex justify-between">
+                    <div>
+                        <span class="text-xs text-gray-500">Deals</span>
+                        <p class="text-sm font-medium">{{ year_data.deal_count }}</p>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-500">Avg Deal</span>
+                        <p class="text-sm font-medium">${{ "{:,.0f}".format(year_data.avg_deal) }}</p>
+                    </div>
+                </div>
+            </div>
+            {% if not loop.first and comparison.by_year[0].total_revenue > 0 %}
+            <div class="mt-3 pt-3 border-t">
+                {% set current_rev = comparison.by_year[0].total_revenue %}
+                {% set this_rev = year_data.total_revenue %}
+                {% if this_rev > 0 %}
+                {% set diff_pct = ((current_rev - this_rev) / this_rev * 100)|round(1) %}
+                <span class="text-xs {{ 'text-green-600' if diff_pct > 0 else 'text-red-600' if diff_pct < 0 else 'text-gray-600' }}">
+                    {{ comparison.by_year[0].year }} is {{ '+' if diff_pct > 0 else '' }}{{ diff_pct }}% vs {{ year_data.year }}
+                </span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Revenue by Medium (Pie Chart) -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Sales by Medium{% if analytics.is_filtered %} (Filtered){% endif %}</h3>
+        <p class="text-sm text-gray-500 mb-2">Click a slice to see deals</p>
+        <canvas id="revenueByMediumChart" height="200"></canvas>
+        <div class="mt-4 pt-4 border-t text-center">
+            <span class="text-sm text-gray-500">Total Sales: </span>
+            <span class="text-lg font-bold text-green-600">${{ "{:,.0f}".format(analytics.total_deal_value) }}</span>
+        </div>
+    </div>
+
+    <!-- Deals Count by Medium (Pie Chart) -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Deals by Medium{% if analytics.is_filtered %} (Filtered){% endif %}</h3>
+        <p class="text-sm text-gray-500 mb-2">Click a slice to see deals</p>
+        <canvas id="dealsByMediumChart" height="200"></canvas>
+        <div class="mt-4 pt-4 border-t text-center">
+            <span class="text-sm text-gray-500">Total Deals: </span>
+            <span class="text-lg font-bold text-slate-800">{{ analytics.closed_deals }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Deals by Month & Medium Bar Chart -->
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <div class="flex flex-wrap justify-between items-center mb-4">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900">Won Deals by Month & Medium</h3>
+            <p class="text-sm text-gray-500">Click any bar segment to see those deals</p>
+        </div>
+        <div class="mt-2 sm:mt-0">
+            <select id="yearSelect" onchange="loadDealsForYear(this.value)"
+                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-700 cursor-pointer">
+                {% for yr in deals_by_month.available_years %}
+                <option value="{{ yr }}" {{ 'selected' if yr == deals_by_month.year else '' }}>{{ yr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div style="height: 400px;">
+        <canvas id="dealsByMonthChart2"></canvas>
+    </div>
+    <div id="dealsChartLoading" class="hidden text-center py-4 text-gray-500">Loading...</div>
+</div>
+
+<!-- Source/Medium Tables -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- By Source Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">Performance by Source</h3>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacts</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for source in analytics.by_source %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ source.source }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ source.count }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ "{:,.2f}".format(source.revenue) }}</td>
+                </tr>
+                {% endfor %}
+                {% if not analytics.by_source %}
+                <tr>
+                    <td colspan="3" class="px-6 py-4 text-center text-gray-500">No data yet</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- By Medium Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">Performance by Medium</h3>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medium</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacts</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for medium in analytics.by_medium %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ medium.medium }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ medium.count }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ "{:,.2f}".format(medium.revenue) }}</td>
+                </tr>
+                {% endfor %}
+                {% if not analytics.by_medium %}
+                <tr>
+                    <td colspan="3" class="px-6 py-4 text-center text-gray-500">No data yet</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Revenue by Salesperson -->
+{% if analytics.by_salesperson %}
+<div class="bg-white rounded-lg shadow overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">Revenue by Salesperson</h3>
+    </div>
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salesperson</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deals Won</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Deal</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for sp in analytics.by_salesperson %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sp.salesperson }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ sp.count }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">${{ "{:,.0f}".format(sp.revenue) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ "{:,.0f}".format(sp.revenue / sp.count) if sp.count > 0 else '0' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Deals Tracking Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Recent Won Deals -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b bg-green-50">
+            <h3 class="text-lg font-semibold text-green-800">Recent Won Deals</h3>
+            <p class="text-sm text-green-600">Sorted by close date</p>
+        </div>
+        <div class="max-h-80 overflow-y-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Deal</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Closed</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for deal in analytics.recent_closed_deals %}
+                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='/deals/{{ deal.id }}'">
+                        <td class="px-4 py-3">
+                            <div class="text-sm font-medium text-gray-900">{{ deal.name }}</div>
+                            <div class="text-xs text-gray-500">{{ deal.salesperson or deal.utm_source or 'Direct' }}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm font-semibold text-green-600">${{ "{:,.0f}".format(deal.value) }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500">{{ deal.actual_close_date|format_date if deal.actual_close_date else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if not analytics.recent_closed_deals %}
+                    <tr>
+                        <td colspan="3" class="px-4 py-6 text-center text-gray-500 text-sm">No closed deals yet</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pipeline Deals -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b bg-blue-50">
+            <h3 class="text-lg font-semibold text-blue-800">Pipeline Deals</h3>
+            <p class="text-sm text-blue-600">Active deals in progress</p>
+        </div>
+        <div class="max-h-80 overflow-y-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Deal</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stage</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for deal in analytics.pipeline_deals %}
+                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='/deals/{{ deal.id }}'">
+                        <td class="px-4 py-3">
+                            <div class="text-sm font-medium text-gray-900">{{ deal.name }}</div>
+                            <div class="text-xs text-gray-500">{{ deal.salesperson or deal.utm_source or 'Direct' }}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm font-semibold text-blue-600">${{ "{:,.0f}".format(deal.value) }}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-xs px-2 py-1 rounded
+                                {% if deal.stage == 'new_deal' %}bg-blue-100 text-blue-800
+                                {% elif deal.stage == 'proposal' %}bg-purple-100 text-purple-800
+                                {% elif deal.stage == 'negotiation' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {% if deal.stage == 'new_deal' %}New
+                                {% elif deal.stage == 'proposal' %}Proposal
+                                {% elif deal.stage == 'negotiation' %}Negotiation
+                                {% else %}{{ deal.stage }}{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not analytics.pipeline_deals %}
+                    <tr>
+                        <td colspan="3" class="px-4 py-6 text-center text-gray-500 text-sm">No deals in pipeline - <a href="/deals/add" class="text-slate-800 hover:underline">add one!</a></td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Contacts -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-900">Recent Contacts</h3>
+        <a href="/contacts" class="text-slate-800 hover:text-purple-800 text-sm font-medium">View All</a>
+    </div>
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deal Value</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for contact in analytics.recent_contacts %}
+            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='/contacts/{{ contact.id }}'">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">{{ contact.first_name }} {{ contact.last_name }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ contact.email }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if contact.deal_value > 0 %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        ${{ "{:,.2f}".format(contact.deal_value) }}
+                    </span>
+                    {% else %}
+                    <span class="text-sm text-gray-400">-</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ contact.created_at|format_date if contact.created_at else '-' }}</td>
+            </tr>
+            {% endfor %}
+            {% if not analytics.recent_contacts %}
+            <tr>
+                <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                    No contacts yet. <a href="/contacts/add" class="text-slate-800 hover:underline">Add your first contact</a>
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Deals Modal -->
+<div id="dealsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col">
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <h3 id="modalTitle" class="text-lg font-semibold text-gray-900">Deals</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="modalContent" class="p-6 overflow-y-auto flex-1">
+            <p class="text-gray-500">Loading...</p>
+        </div>
+        <div class="px-6 py-4 border-t bg-gray-50">
+            <button onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Date filter values (for API calls)
+    const filterStart = '{{ analytics.filter_start or "" }}';
+    const filterEnd = '{{ analytics.filter_end or "" }}';
+
+    function getDateFilterParams() {
+        let params = '';
+        if (filterStart) params += '?start=' + filterStart;
+        if (filterEnd) params += (params ? '&' : '?') + 'end=' + filterEnd;
+        return params;
+    }
+
+    // Build data arrays from analytics
+    const mediumLabels = [{% for m in analytics.by_medium %}"{{ m.medium }}"{% if not loop.last %}, {% endif %}{% endfor %}];
+    const mediumCounts = [{% for m in analytics.by_medium %}{{ m.count }}{% if not loop.last %}, {% endif %}{% endfor %}];
+
+    // Modal functions
+    function openModal(title) {
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('dealsModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        document.getElementById('dealsModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    // Close modal on background click
+    document.getElementById('dealsModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    // Fetch and display deals
+    async function showDealsByMedium(medium) {
+        const dateRange = filterStart && filterEnd ? ` (${filterStart} to ${filterEnd})` : '';
+        openModal('Deals from Medium: ' + medium + dateRange);
+        document.getElementById('modalContent').innerHTML = '<p class="text-gray-500">Loading...</p>';
+
+        try {
+            const response = await fetch('/api/deals/by-medium/' + encodeURIComponent(medium) + getDateFilterParams());
+            const deals = await response.json();
+            displayDeals(deals, 'medium');
+        } catch (error) {
+            document.getElementById('modalContent').innerHTML = '<p class="text-red-500">Error loading deals</p>';
+        }
+    }
+
+    async function showDealsBySource(source) {
+        const dateRange = filterStart && filterEnd ? ` (${filterStart} to ${filterEnd})` : '';
+        openModal('Deals from Source: ' + source + dateRange);
+        document.getElementById('modalContent').innerHTML = '<p class="text-gray-500">Loading...</p>';
+
+        try {
+            const response = await fetch('/api/deals/by-source/' + encodeURIComponent(source) + getDateFilterParams());
+            const deals = await response.json();
+            displayDeals(deals, 'source');
+        } catch (error) {
+            document.getElementById('modalContent').innerHTML = '<p class="text-red-500">Error loading deals</p>';
+        }
+    }
+
+    let modalDealsData = [];
+    let currentSortField = 'value';
+    let currentSortDir = 'desc';
+    let currentDisplayType = 'medium';
+
+    function displayDeals(deals, type) {
+        if (deals.length === 0) {
+            document.getElementById('modalContent').innerHTML = '<p class="text-gray-500">No deals found</p>';
+            return;
+        }
+
+        modalDealsData = deals;
+        currentDisplayType = type;
+        renderDealsTable();
+    }
+
+    function sortDeals(field) {
+        if (currentSortField === field) {
+            currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSortField = field;
+            currentSortDir = 'desc';
+        }
+        renderDealsTable();
+    }
+
+    function renderDealsTable() {
+        const deals = [...modalDealsData];
+        const type = currentDisplayType;
+
+        // Sort deals
+        deals.sort((a, b) => {
+            let valA, valB;
+            switch(currentSortField) {
+                case 'name': valA = (a.name || '').toLowerCase(); valB = (b.name || '').toLowerCase(); break;
+                case 'contact': valA = ((a.first_name || '') + ' ' + (a.last_name || '')).toLowerCase(); valB = ((b.first_name || '') + ' ' + (b.last_name || '')).toLowerCase(); break;
+                case 'value': valA = a.value || 0; valB = b.value || 0; break;
+                case 'salesperson': valA = (a.salesperson || '').toLowerCase(); valB = (b.salesperson || '').toLowerCase(); break;
+                case 'date': valA = a.actual_close_date || ''; valB = b.actual_close_date || ''; break;
+                default: valA = a.value || 0; valB = b.value || 0;
+            }
+            if (valA < valB) return currentSortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return currentSortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        const totalValue = deals.reduce((sum, d) => sum + (d.value || 0), 0);
+        const sortIcon = (field) => currentSortField === field ? (currentSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+
+        let html = `
+            <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">${deals.length} deal(s)</span>
+                    <span class="text-sm font-semibold text-green-600">Total: $${totalValue.toLocaleString()}</span>
+                </div>
+            </div>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDeals('name')">Deal Name${sortIcon('name')}</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDeals('contact')">Contact${sortIcon('contact')}</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDeals('salesperson')">Salesperson${sortIcon('salesperson')}</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDeals('value')">Value${sortIcon('value')}</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDeals('date')">Closed${sortIcon('date')}</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+        `;
+
+        deals.forEach(deal => {
+            const closedDate = deal.actual_close_date ? deal.actual_close_date.substring(0, 10) : '-';
+            const contactName = deal.first_name ? `${deal.first_name} ${deal.last_name || ''}` : '-';
+            const value = deal.value || 0;
+            html += `
+                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='/deals/${deal.id}'">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${deal.name || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${contactName}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${deal.salesperson || '-'}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-green-600">$${value.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${closedDate}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        document.getElementById('modalContent').innerHTML = html;
+    }
+
+    // Chart colors
+    const chartColors = [
+        'rgba(102, 126, 234, 0.8)',
+        'rgba(118, 75, 162, 0.8)',
+        'rgba(16, 185, 129, 0.8)',
+        'rgba(245, 158, 11, 0.8)',
+        'rgba(239, 68, 68, 0.8)',
+        'rgba(107, 114, 128, 0.8)',
+        'rgba(59, 130, 246, 0.8)',
+        'rgba(236, 72, 153, 0.8)'
+    ];
+
+    // Revenue by Medium data
+    const mediumRevenue = [{% for m in analytics.by_medium %}{{ m.revenue }}{% if not loop.last %}, {% endif %}{% endfor %}];
+
+    // Revenue by Medium Pie Chart (clickable with numbers)
+    const revenueCtx = document.getElementById('revenueByMediumChart').getContext('2d');
+    const revenueByMediumChart = new Chart(revenueCtx, {
+        type: 'pie',
+        data: {
+            labels: mediumLabels,
+            datasets: [{
+                data: mediumRevenue,
+                backgroundColor: chartColors
+            }]
+        },
+        options: {
+            responsive: true,
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const medium = mediumLabels[index];
+                    showDealsByMedium(medium);
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: $${value.toLocaleString()} (${percentage}%)`;
+                        },
+                        afterLabel: function() {
+                            return 'Click to see deals';
+                        }
+                    }
+                },
+                datalabels: {
+                    color: '#fff',
+                    font: { weight: 'bold', size: 12 },
+                    formatter: (value) => '$' + value.toLocaleString()
+                }
+            }
+        },
+        plugins: [{
+            id: 'datalabels',
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((element, index) => {
+                        const data = dataset.data[index];
+                        if (data > 0) {
+                            const position = element.tooltipPosition();
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 11px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('$' + data.toLocaleString(), position.x, position.y);
+                        }
+                    });
+                });
+            }
+        }]
+    });
+
+    // Deals Count by Medium Pie Chart (clickable with numbers)
+    const dealsCtx = document.getElementById('dealsByMediumChart').getContext('2d');
+    const dealsByMediumChart = new Chart(dealsCtx, {
+        type: 'pie',
+        data: {
+            labels: mediumLabels,
+            datasets: [{
+                data: mediumCounts,
+                backgroundColor: chartColors
+            }]
+        },
+        options: {
+            responsive: true,
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const medium = mediumLabels[index];
+                    showDealsByMedium(medium);
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ${value} deals (${percentage}%)`;
+                        },
+                        afterLabel: function() {
+                            return 'Click to see deals';
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            id: 'datalabels2',
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((element, index) => {
+                        const data = dataset.data[index];
+                        if (data > 0) {
+                            const position = element.tooltipPosition();
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(data, position.x, position.y);
+                        }
+                    });
+                });
+            }
+        }]
+    });
+
+    // Deals by Month & Medium Stacked Bar Chart
+    let currentDealsYear = '{{ deals_by_month.year }}';
+    let dealsChartInstance2 = null;
+    let currentDealsData = {
+        months: [{% for m in deals_by_month.months %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        month_names: [{% for m in deals_by_month.month_names %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        mediums: [{% for m in deals_by_month.mediums %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        data: {{ deals_by_month.data | tojson }},
+        totals: {{ deals_by_month.totals | tojson }}
+    };
+
+    function createDealsChart2(data) {
+        const ctx = document.getElementById('dealsByMonthChart2').getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (dealsChartInstance2) {
+            dealsChartInstance2.destroy();
+        }
+
+        // Build datasets for each medium (stacked)
+        const datasets = data.mediums.map((medium, index) => ({
+            label: medium,
+            data: data.data[medium] || [],
+            backgroundColor: chartColors[index % chartColors.length],
+            borderColor: chartColors[index % chartColors.length].replace('0.8', '1'),
+            borderWidth: 1
+        }));
+
+        dealsChartInstance2 = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.month_names,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const element = elements[0];
+                        const datasetIndex = element.datasetIndex;
+                        const monthIndex = element.index;
+                        const medium = data.mediums[datasetIndex];
+                        const month = data.months[monthIndex];
+                        showDealsByMonthMedium(month, medium);
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const monthIndex = context[0].dataIndex;
+                                return data.month_names[monthIndex] + ' ' + currentDealsYear + ' (Total: ' + data.totals[monthIndex] + ' deals)';
+                            },
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw} deals`;
+                            },
+                            afterBody: function() {
+                                return '\nClick to see these deals';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Deals'
+                        },
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'totalLabels',
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    const chartArea = chart.chartArea;
+
+                    chart.data.labels.forEach((label, index) => {
+                        const total = data.totals[index];
+                        if (total > 0) {
+                            // Get the top of the stacked bar
+                            const meta = chart.getDatasetMeta(chart.data.datasets.length - 1);
+                            const bar = meta.data[index];
+                            if (bar) {
+                                const x = bar.x;
+                                const y = bar.y - 8;
+
+                                ctx.save();
+                                ctx.fillStyle = '#374151';
+                                ctx.font = 'bold 12px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(total, x, y);
+                                ctx.restore();
+                            }
+                        }
+                    });
+                }
+            }]
+        });
+    }
+
+    // Function to load deals for a different year
+    async function loadDealsForYear(year) {
+        // Update dropdown selection
+        document.getElementById('yearSelect').value = year;
+
+        // Show loading
+        document.getElementById('dealsChartLoading').classList.remove('hidden');
+
+        try {
+            const response = await fetch('/api/deals/by-year/' + year);
+            const data = await response.json();
+            currentDealsYear = year;
+            currentDealsData = data;
+            createDealsChart2(data);
+        } catch (error) {
+            console.error('Error loading deals data:', error);
+        }
+
+        document.getElementById('dealsChartLoading').classList.add('hidden');
+    }
+
+    // Function to show deals for a specific month and medium
+    async function showDealsByMonthMedium(month, medium) {
+        const monthName = currentDealsData.month_names[currentDealsData.months.indexOf(month)];
+        openModal(`Won Deals: ${medium} - ${monthName} ${currentDealsYear}`);
+        document.getElementById('modalContent').innerHTML = '<p class="text-gray-500">Loading...</p>';
+
+        try {
+            const response = await fetch('/api/deals/by-month-medium/' + encodeURIComponent(month) + '/' + encodeURIComponent(medium));
+            const deals = await response.json();
+            displayDealsInModal(deals, month, medium);
+        } catch (error) {
+            document.getElementById('modalContent').innerHTML = '<p class="text-red-500">Error loading deals</p>';
+        }
+    }
+
+    function displayDealsInModal(deals, month, medium) {
+        if (deals.length === 0) {
+            document.getElementById('modalContent').innerHTML = '<p class="text-gray-500">No deals found for this period</p>';
+            return;
+        }
+
+        const totalValue = deals.reduce((sum, d) => sum + (d.value || 0), 0);
+
+        let html = `
+            <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                <div class="flex justify-between">
+                    <span class="text-sm font-semibold text-slate-800">${deals.length} deal(s)</span>
+                    <span class="text-sm font-semibold text-green-600">Total: $${totalValue.toLocaleString()}</span>
+                </div>
+            </div>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deal Name</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salesperson</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Closed</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+        `;
+
+        deals.forEach(deal => {
+            const closedDate = deal.actual_close_date ? deal.actual_close_date.substring(0, 10) : '-';
+            html += `
+                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='/deals/${deal.id}'">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${deal.name}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-green-600">$${(deal.value || 0).toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${deal.salesperson || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${closedDate}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        document.getElementById('modalContent').innerHTML = html;
+    }
+
+    // Initialize the chart
+    createDealsChart2(currentDealsData);
+
+    // Quick Notes Auto-Save
+    const notesTextarea = document.getElementById('quick-notes');
+    const notesStatus = document.getElementById('notes-status');
+    let saveTimeout;
+
+    notesTextarea.addEventListener('input', function() {
+        notesStatus.textContent = 'Saving...';
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            fetch('/api/quick-notes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: notesTextarea.value })
+            })
+            .then(response => response.json())
+            .then(data => {
+                notesStatus.textContent = 'Saved';
+                setTimeout(() => { notesStatus.textContent = ''; }, 2000);
+            })
+            .catch(err => {
+                notesStatus.textContent = 'Error saving';
+            });
+        }, 1000); // Save 1 second after user stops typing
+    });
+</script>
+{% endblock %}

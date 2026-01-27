@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Traffic Settings - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/traffic" class="text-slate-800 hover:text-teal-800 text-sm">&larr; Back to Traffic Dashboard</a>
+</div>
+
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b gradient-bg">
+            <h1 class="text-2xl font-bold text-white">Google Analytics Settings</h1>
+            <p class="text-teal-200 mt-1">Connect your GA4 property with OAuth</p>
+        </div>
+
+        <div class="p-6">
+            {% if success %}
+            <div class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                {{ success }}
+            </div>
+            {% endif %}
+
+            {% if error %}
+            <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <!-- Current Status -->
+            <div class="mb-8 p-4 rounded-lg {{ 'bg-green-50 border border-green-200' if ga_connected else 'bg-yellow-50 border border-yellow-200' }}">
+                <div class="flex items-center">
+                    {% if ga_connected %}
+                    <svg class="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <p class="font-semibold text-green-800">Connected to Google Analytics</p>
+                        <p class="text-sm text-green-600">Property ID: {{ config.property_id }}</p>
+                    </div>
+                    {% elif oauth_configured %}
+                    <svg class="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <p class="font-semibold text-blue-800">OAuth Configured</p>
+                        <p class="text-sm text-blue-600">Click below to connect with Google</p>
+                    </div>
+                    {% else %}
+                    <svg class="w-6 h-6 text-yellow-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <div>
+                        <p class="font-semibold text-yellow-800">Not Configured</p>
+                        <p class="text-sm text-yellow-600">Enter OAuth credentials below</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if ga_connected %}
+            <!-- Websites List - Show FIRST when connected -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Websites</h3>
+
+                {% if websites %}
+                <div class="space-y-3 mb-6">
+                    {% for site in websites %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <p class="font-medium text-gray-900">{{ site.name }}</p>
+                            <p class="text-sm text-gray-500">Property ID: {{ site.property_id }}</p>
+                        </div>
+                        {% if websites|length > 1 %}
+                        <form method="POST" action="/traffic/websites/{{ site.id }}/remove"
+                              onsubmit="return confirm('Remove {{ site.name }}?');">
+                            <button type="submit" class="text-red-600 hover:text-red-800 text-sm">
+                                Remove
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Add Website Form -->
+                <div class="bg-purple-50 border border-teal-200 rounded-lg p-4">
+                    <h4 class="font-medium text-slate-900 mb-3">Add Another Website</h4>
+                    <form method="POST" action="/traffic/websites/add" class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Website Name</label>
+                                <input type="text" name="name" placeholder="e.g., Company Blog"
+                                       required
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">GA4 Property ID</label>
+                                <input type="text" name="property_id" placeholder="e.g., 123456789"
+                                       required
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                            </div>
+                        </div>
+                        <button type="submit" class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 text-sm font-medium">
+                            Add Website
+                        </button>
+                    </form>
+                    <p class="text-xs text-slate-900 mt-2">
+                        Find your Property ID: Google Analytics > Admin > Property Settings > Property ID
+                    </p>
+                </div>
+            </div>
+
+            <!-- Reconnect / Disconnect -->
+            <div class="pt-6 border-t">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Reconnect</h3>
+                        <p class="text-sm text-gray-500 mb-3">Re-authorize without losing your websites</p>
+                        <a href="/traffic/oauth/authorize" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Reconnect with Google
+                        </a>
+                    </div>
+                    <div class="text-right">
+                        <h3 class="text-lg font-semibold text-red-600 mb-2">Disconnect</h3>
+                        <p class="text-sm text-gray-500 mb-3">Remove connection and all websites</p>
+                        <form method="POST" action="/traffic/disconnect" onsubmit="return confirm('Are you sure you want to disconnect Google Analytics? This will remove all websites.');">
+                            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
+                                Disconnect
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Not connected - show setup flow -->
+
+            {% if oauth_configured and not ga_connected %}
+            <!-- Connect Button -->
+            <div class="mb-8 text-center">
+                <a href="/traffic/oauth/authorize" class="inline-flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg shadow-lg">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Connect with Google
+                </a>
+                <p class="text-sm text-gray-500 mt-2">You'll be redirected to Google to authorize access</p>
+            </div>
+            {% endif %}
+
+            {% if not oauth_configured %}
+            <!-- Setup Instructions -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">One-Time Setup (~10 minutes)</h3>
+                <ol class="list-decimal list-inside space-y-4 text-gray-700">
+                    <li>
+                        <span class="font-medium">Go to Google Cloud Console</span>
+                        <p class="ml-6 text-sm text-gray-500"><a href="https://console.cloud.google.com" target="_blank" class="text-slate-800 underline">console.cloud.google.com</a></p>
+                    </li>
+                    <li>
+                        <span class="font-medium">Create a project</span> (top dropdown > New Project) or select existing
+                    </li>
+                    <li>
+                        <span class="font-medium">Enable the Google Analytics Data API</span>
+                        <p class="ml-6 text-sm text-gray-500">Go to <a href="https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com" target="_blank" class="text-slate-800 underline">this link</a> and click <strong>Enable</strong></p>
+                    </li>
+                    <li>
+                        <span class="font-medium">Set up OAuth Consent Screen</span>
+                        <p class="ml-6 text-sm text-gray-500">Go to APIs & Services > OAuth consent screen (or "Google Auth Platform" > "Branding")</p>
+                        <p class="ml-6 text-sm text-gray-500">Choose "External", fill in App name & your email, click through to save</p>
+                    </li>
+                    <li>
+                        <span class="font-medium">Add yourself as a Test User</span>
+                        <p class="ml-6 text-sm text-gray-500">Go to "Google Auth Platform" > "Audience" (or OAuth consent screen > Test users)</p>
+                        <p class="ml-6 text-sm text-gray-500">Click "+ Add Users" and enter your Gmail address</p>
+                    </li>
+                    <li>
+                        <span class="font-medium">Create OAuth Credentials</span>
+                        <p class="ml-6 text-sm text-gray-500">Go to APIs & Services > Credentials > Create Credentials > OAuth client ID</p>
+                        <p class="ml-6 text-sm text-gray-500">Application type: <strong>Web application</strong></p>
+                        <p class="ml-6 text-sm text-gray-500">Under "Authorized redirect URIs" click + ADD URI and enter:</p>
+                        <p class="ml-6 text-sm"><code class="bg-gray-100 px-2 py-1 rounded">http://localhost:5000/traffic/oauth/callback</code></p>
+                        <p class="ml-6 text-sm text-gray-500">Click Create</p>
+                    </li>
+                    <li>
+                        <span class="font-medium">Copy Client ID and Client Secret below</span>
+                        <p class="ml-6 text-sm text-gray-500">Client Secret usually starts with <code class="bg-gray-100 px-1">GOCSPX-</code></p>
+                    </li>
+                </ol>
+            </div>
+            {% endif %}
+
+            <!-- OAuth Credentials Form -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                    {% if oauth_configured %}Update {% endif %}OAuth Credentials
+                </h3>
+                <form method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                        <input type="text" name="client_id"
+                               value="{{ oauth_secrets.web.client_id if oauth_secrets else '' }}"
+                               placeholder="xxxx.apps.googleusercontent.com"
+                               required
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700 font-mono text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
+                        <input type="password" name="client_secret"
+                               value="{{ oauth_secrets.web.client_secret if oauth_secrets else '' }}"
+                               placeholder="GOCSPX-xxxx"
+                               required
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700 font-mono text-sm">
+                    </div>
+                    <button type="submit" class="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">
+                        Save Credentials
+                    </button>
+                </form>
+            </div>
+
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

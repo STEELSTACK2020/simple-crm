@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}{{ contact.first_name }} {{ contact.last_name }} - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/contacts" class="text-slate-800 hover:text-slate-900 text-sm">&larr; Back to Contacts</a>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <!-- Header -->
+    <div class="gradient-bg px-6 py-8">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-white">{{ contact.first_name }} {{ contact.last_name }}</h1>
+                <p class="text-slate-200 mt-1">{{ contact.email }}</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="/contacts/{{ contact.id }}/edit"
+                   class="bg-white text-slate-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium text-sm">
+                    Edit Contact
+                </a>
+                <form action="/contacts/{{ contact.id }}/delete" method="POST" class="inline"
+                      onsubmit="return confirm('Are you sure you want to delete this contact?');">
+                    <button type="submit" class="bg-red-500 text-white hover:bg-red-600 px-4 py-2 rounded-lg font-medium text-sm">
+                        Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Deal Value Badge -->
+        {% if contact.deal_value > 0 %}
+        <div class="mt-4">
+            <span class="bg-green-500 text-white px-4 py-2 rounded-full text-lg font-semibold">
+                Deal: ${{ "{:,.2f}".format(contact.deal_value) }}
+            </span>
+            {% if contact.deal_closed_date %}
+            <span class="text-slate-200 ml-3 text-sm">Closed on {{ contact.deal_closed_date|format_date }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Contact Details -->
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Basic Info -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Contact Information</h3>
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Full Name</dt>
+                        <dd class="text-sm text-gray-900 mt-1">{{ contact.first_name }} {{ contact.last_name }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Email</dt>
+                        <dd class="text-sm text-gray-900 mt-1">
+                            <a href="mailto:{{ contact.email }}" class="text-slate-800 hover:underline">{{ contact.email }}</a>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Phone</dt>
+                        <dd class="text-sm text-gray-900 mt-1">
+                            {% if contact.phone %}
+                            <a href="tel:{{ contact.phone }}" class="text-slate-800 hover:underline">{{ contact.phone }}</a>
+                            {% else %}
+                            <span class="text-gray-400">Not provided</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- UTM Parameters -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Traffic Source (UTM)</h3>
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Source</dt>
+                        <dd class="text-sm text-gray-900 mt-1">
+                            {% if contact.utm_source %}
+                            <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-800">{{ contact.utm_source }}</span>
+                            {% else %}
+                            <span class="text-gray-400">Not tracked</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Medium</dt>
+                        <dd class="text-sm text-gray-900 mt-1">
+                            {% if contact.utm_medium %}
+                            <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-900">{{ contact.utm_medium }}</span>
+                            {% else %}
+                            <span class="text-gray-400">Not tracked</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Campaign</dt>
+                        <dd class="text-sm text-gray-900 mt-1">
+                            {% if contact.utm_campaign %}
+                            <span class="px-2 py-1 rounded-full bg-green-100 text-green-800">{{ contact.utm_campaign }}</span>
+                            {% else %}
+                            <span class="text-gray-400">Not tracked</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Term (Keyword)</dt>
+                        <dd class="text-sm text-gray-900 mt-1">{{ contact.utm_term or '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Content</dt>
+                        <dd class="text-sm text-gray-900 mt-1">{{ contact.utm_content or '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Original Source Details</dt>
+                        <dd class="text-sm text-gray-900 mt-1">{{ contact.original_source_details or '-' }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Deal & Notes Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+            <!-- Deal Info -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Deal Information</h3>
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Deal Value</dt>
+                        <dd class="text-2xl font-bold mt-1 {{ 'text-green-600' if contact.deal_value > 0 else 'text-gray-400' }}">
+                            ${{ "{:,.2f}".format(contact.deal_value) }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Deal Status</dt>
+                        <dd class="mt-1">
+                            {% if contact.deal_value > 0 and contact.deal_closed_date %}
+                            <span class="px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">Closed</span>
+                            {% elif contact.deal_value > 0 %}
+                            <span class="px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm font-medium">Pending Close Date</span>
+                            {% else %}
+                            <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium">No Deal Yet</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Close Date</dt>
+                        <dd class="text-sm text-gray-900 mt-1">
+                            {% if contact.deal_closed_date %}
+                            {{ contact.deal_closed_date|format_date }}
+                            {% else %}
+                            <span class="text-gray-400">Not set</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Notes</h3>
+                <div class="bg-gray-50 rounded-lg p-4 min-h-[100px]">
+                    {% if contact.notes %}
+                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ contact.notes }}</p>
+                    {% else %}
+                    <p class="text-sm text-gray-400 italic">No notes added</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Associated Deals -->
+        {% if deals %}
+        <div class="mt-8 pt-6 border-t">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Associated Deals ({{ deals|length }})</h3>
+            <div class="space-y-3">
+                {% for deal in deals %}
+                <a href="/deals/{{ deal.id }}" class="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 border border-gray-200">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-medium text-gray-900">{{ deal.name }}</p>
+                            <p class="text-sm text-gray-500 mt-1">
+                                {% if deal.salesperson %}{{ deal.salesperson }} &bull; {% endif %}
+                                {{ deal.role|capitalize }} contact
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-semibold text-slate-800">${{ "{:,.0f}".format(deal.value) }}</p>
+                            <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium
+                                {% if deal.stage == 'new_deal' %}bg-blue-100 text-blue-800
+                                {% elif deal.stage == 'proposal' %}bg-slate-100 text-slate-900
+                                {% elif deal.stage == 'negotiation' %}bg-yellow-100 text-yellow-800
+                                {% elif deal.stage == 'closed_won' %}bg-green-100 text-green-800
+                                {% elif deal.stage == 'closed_lost' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {% if deal.stage == 'new_deal' %}New Deal
+                                {% elif deal.stage == 'closed_won' %}Closed Won
+                                {% elif deal.stage == 'closed_lost' %}Closed Lost
+                                {% else %}{{ deal.stage|replace('_', ' ')|title }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Email History -->
+        <div class="mt-8 pt-6 border-t">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Email History</h3>
+                {% if not email_connected %}
+                <a href="/settings/email" class="text-sm text-blue-600 hover:text-blue-800">Connect Email →</a>
+                {% endif %}
+            </div>
+
+            {% if email_connected %}
+            <div id="email-list" class="space-y-2">
+                <div class="text-center py-4 text-gray-500">
+                    <span class="animate-pulse">Loading emails...</span>
+                </div>
+            </div>
+
+            <!-- Email Modal -->
+            <div id="email-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
+                    <div class="p-4 border-b flex justify-between items-start">
+                        <div class="flex-1 min-w-0 pr-4">
+                            <h3 id="modal-subject" class="text-lg font-semibold text-gray-900 truncate"></h3>
+                            <p id="modal-from" class="text-sm text-gray-600 mt-1"></p>
+                            <p id="modal-to" class="text-sm text-gray-500"></p>
+                            <p id="modal-date" class="text-xs text-gray-400 mt-1"></p>
+                        </div>
+                        <button onclick="closeEmailModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                    </div>
+                    <div id="modal-body" class="p-4 overflow-y-auto flex-1 text-sm text-gray-700">
+                        <div class="text-center py-4 text-gray-500">
+                            <span class="animate-pulse">Loading email...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function openEmailModal(source, emailId, subject) {
+                    const modal = document.getElementById('email-modal');
+                    const bodyContainer = document.getElementById('modal-body');
+
+                    // Show modal with loading state
+                    modal.classList.remove('hidden');
+                    document.getElementById('modal-subject').textContent = subject;
+                    document.getElementById('modal-from').textContent = '';
+                    document.getElementById('modal-to').textContent = '';
+                    document.getElementById('modal-date').textContent = '';
+                    bodyContainer.innerHTML = '<div class="text-center py-4 text-gray-500"><span class="animate-pulse">Loading email...</span></div>';
+
+                    // Fetch full email
+                    fetch(`/api/emails/${source}/${emailId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.email) {
+                                const email = data.email;
+                                document.getElementById('modal-subject').textContent = email.subject;
+                                document.getElementById('modal-from').textContent = 'From: ' + email.from;
+                                document.getElementById('modal-to').textContent = 'To: ' + email.to;
+                                document.getElementById('modal-date').textContent = email.date ? new Date(email.date).toLocaleString() : '';
+
+                                // Display body - check if HTML or plain text
+                                if (email.body.includes('<') && email.body.includes('>')) {
+                                    // HTML content - render in iframe for safety
+                                    bodyContainer.innerHTML = `<iframe srcdoc="${email.body.replace(/"/g, '&quot;')}" class="w-full min-h-[300px] border-0" sandbox="allow-same-origin"></iframe>`;
+                                } else {
+                                    // Plain text - preserve whitespace
+                                    bodyContainer.innerHTML = `<pre class="whitespace-pre-wrap font-sans">${email.body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+                                }
+                            } else {
+                                bodyContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading email: ' + (data.error || 'Unknown error') + '</p>';
+                            }
+                        })
+                        .catch(err => {
+                            bodyContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading email</p>';
+                        });
+                }
+
+                function closeEmailModal() {
+                    document.getElementById('email-modal').classList.add('hidden');
+                }
+
+                // Close modal on escape key
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') closeEmailModal();
+                });
+
+                // Close modal on backdrop click
+                document.getElementById('email-modal').addEventListener('click', function(e) {
+                    if (e.target === this) closeEmailModal();
+                });
+
+                // Fetch emails on page load
+                fetch('/api/emails/{{ contact.email }}?max_results=15')
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById('email-list');
+                        if (data.success && data.emails && data.emails.length > 0) {
+                            let html = '';
+                            data.emails.forEach(email => {
+                                const date = email.date ? new Date(email.date).toLocaleDateString() : '';
+                                const source = email.source === 'gmail' ? '📧' : '📬';
+                                const escapedSubject = email.subject.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                                html += `
+                                    <div class="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 border border-gray-200 cursor-pointer transition-colors"
+                                         onclick="openEmailModal('${email.source}', '${email.id}', '${escapedSubject}')">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-900 truncate">${source} ${email.subject}</p>
+                                                <p class="text-xs text-gray-500 mt-1 truncate">From: ${email.from}</p>
+                                            </div>
+                                            <span class="text-xs text-gray-400 ml-2 whitespace-nowrap">${date}</span>
+                                        </div>
+                                        <p class="text-xs text-gray-600 mt-2 line-clamp-2">${email.snippet}</p>
+                                    </div>
+                                `;
+                            });
+                            container.innerHTML = html;
+                        } else if (data.emails && data.emails.length === 0) {
+                            container.innerHTML = '<p class="text-center py-4 text-gray-500">No emails found with this contact</p>';
+                        } else {
+                            container.innerHTML = '<p class="text-center py-4 text-red-500">Error loading emails: ' + (data.error || data.errors?.join(', ') || 'Unknown error') + '</p>';
+                        }
+                    })
+                    .catch(err => {
+                        document.getElementById('email-list').innerHTML = '<p class="text-center py-4 text-red-500">Error loading emails</p>';
+                    });
+            </script>
+            {% else %}
+            <div class="bg-gray-50 rounded-lg p-6 text-center">
+                <p class="text-gray-500 mb-3">Connect your email to see conversation history with this contact</p>
+                <a href="/settings/email" class="inline-block bg-slate-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-900">
+                    Connect Email
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Timeline / Metadata -->
+        <div class="mt-8 pt-6 border-t">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Timeline</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <p class="text-xs font-medium text-blue-600 uppercase">Contact Created</p>
+                    <p class="text-sm text-gray-900 mt-1">{{ contact.created_at|format_date if contact.created_at else 'N/A' }}</p>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-4">
+                    <p class="text-xs font-medium text-slate-800 uppercase">Last Updated</p>
+                    <p class="text-sm text-gray-900 mt-1">{{ contact.updated_at|format_date if contact.updated_at else 'N/A' }}</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4">
+                    <p class="text-xs font-medium text-green-600 uppercase">Deal Closed</p>
+                    <p class="text-sm text-gray-900 mt-1">{{ contact.deal_closed_date|format_date if contact.deal_closed_date else 'Not closed' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

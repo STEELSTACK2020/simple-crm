@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Select GA4 Property - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto mt-10">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b gradient-bg">
+            <h1 class="text-2xl font-bold text-white">Almost Done!</h1>
+            <p class="text-purple-200 mt-1">Enter your GA4 Property ID</p>
+        </div>
+
+        <div class="p-6">
+            <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-green-800 font-medium">Google account connected successfully!</p>
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <p class="text-gray-600 mb-6">
+                Enter your GA4 Property ID to complete the setup. You can find this in:
+            </p>
+            <p class="text-sm text-gray-500 mb-6 ml-4">
+                Google Analytics > Admin > Property Settings > Property ID
+            </p>
+
+            <form method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">GA4 Property ID</label>
+                    <input type="text" name="property_id"
+                           placeholder="e.g., 123456789"
+                           required
+                           autofocus
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-700 text-lg">
+                    <p class="text-xs text-gray-500 mt-1">Numbers only (e.g., 123456789)</p>
+                </div>
+
+                <button type="submit" class="w-full px-6 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium text-lg">
+                    Complete Setup
+                </button>
+            </form>
+
+            <div class="mt-6 pt-6 border-t text-center">
+                <a href="/traffic/settings" class="text-sm text-gray-500 hover:text-gray-700">Cancel and go back to settings</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

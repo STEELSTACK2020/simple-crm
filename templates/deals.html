@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block title %}Deals Pipeline - Simple CRM{% endblock %}
+
+{% block content %}
+<!-- Filter Bar -->
+<div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-4 flex-wrap">
+        <div class="flex items-center gap-2">
+            <input type="text" id="search-input" placeholder="Search deals..."
+                   value="{{ search_query or '' }}"
+                   onkeypress="if(event.key === 'Enter') applyFilters()"
+                   class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 w-40">
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-gray-700">Salesperson:</label>
+            <select id="salesperson-filter" onchange="applyFilters()"
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                <option value="">All</option>
+                {% for sp in salespeople %}
+                <option value="{{ sp.name }}" {{ 'selected' if current_salesperson == sp.name else '' }}>{{ sp.name }}</option>
+                {% endfor %}
+            </select>
+            <a href="/salespeople" class="text-xs text-slate-600 hover:text-slate-800 hover:underline">manage</a>
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-gray-700">Stage:</label>
+            <select id="stage-filter" onchange="applyFilters()"
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                <option value="">All Stages</option>
+                <option value="closed_won" {{ 'selected' if current_stage == 'closed_won' else '' }}>Closed Won</option>
+                <option value="closed_lost" {{ 'selected' if current_stage == 'closed_lost' else '' }}>Closed Lost</option>
+                <option value="new_deal" {{ 'selected' if current_stage == 'new_deal' else '' }}>New Deal</option>
+                <option value="proposal" {{ 'selected' if current_stage == 'proposal' else '' }}>Proposal</option>
+                <option value="negotiation" {{ 'selected' if current_stage == 'negotiation' else '' }}>Negotiation</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-gray-700">From:</label>
+            <input type="date" id="date-from" value="{{ date_from or '' }}" onchange="applyFilters()"
+                   class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-gray-700">To:</label>
+            <input type="date" id="date-to" value="{{ date_to or '' }}" onchange="applyFilters()"
+                   class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+        </div>
+        {% if current_salesperson or current_stage or search_query or date_from or date_to %}
+        <a href="/deals" class="text-sm text-slate-600 hover:text-slate-800 underline">Clear filters</a>
+        {% endif %}
+    </div>
+    {% if current_salesperson or current_stage or search_query or date_from or date_to %}
+    <span class="text-sm text-gray-500">
+        Filtered{% if search_query %}: "<strong>{{ search_query }}</strong>"{% endif %}
+        {% if (current_salesperson or current_stage or date_from or date_to) and search_query %} + {% endif %}
+        {% if current_salesperson %}<strong>{{ current_salesperson }}</strong>{% endif %}
+        {% if current_salesperson and (current_stage or date_from) %} / {% endif %}
+        {% if current_stage %}<strong>{{ current_stage|replace('_', ' ')|title }}</strong>{% endif %}
+        {% if (current_stage and (date_from or date_to)) %} / {% endif %}
+        {% if date_from or date_to %}<strong>{{ date_from or 'Start' }} - {{ date_to or 'Now' }}</strong>{% endif %}
+    </span>
+    {% endif %}
+</div>
+
+<script>
+// Save/Load filter preferences for deals page
+(function() {
+    const STORAGE_KEY = 'dealsFilterPrefs';
+    const hasFilters = window.location.search.length > 0;
+
+    // If page has filters, save them
+    if (hasFilters) {
+        localStorage.setItem(STORAGE_KEY, window.location.search);
+    }
+
+    // If no filters in URL, check for saved preference and redirect
+    if (!hasFilters) {
+        const savedFilter = localStorage.getItem(STORAGE_KEY);
+        if (savedFilter && savedFilter.length > 0) {
+            window.location.href = '/deals' + savedFilter;
+        }
+    }
+
+    // Intercept "Clear filters" link to clear saved preference
+    const clearLink = document.querySelector('a[href="/deals"]');
+    if (clearLink) {
+        clearLink.addEventListener('click', function(e) {
+            localStorage.removeItem(STORAGE_KEY);
+        });
+    }
+})();
+
+function applyFilters() {
+    const search = document.getElementById('search-input').value.trim();
+    const salesperson = document.getElementById('salesperson-filter').value;
+    const stage = document.getElementById('stage-filter').value;
+    const dateFrom = document.getElementById('date-from').value;
+    const dateTo = document.getElementById('date-to').value;
+
+    const params = [];
+    if (search) params.push('search=' + encodeURIComponent(search));
+    if (salesperson) params.push('salesperson=' + encodeURIComponent(salesperson));
+    if (stage) params.push('stage=' + encodeURIComponent(stage));
+    if (dateFrom) params.push('date_from=' + encodeURIComponent(dateFrom));
+    if (dateTo) params.push('date_to=' + encodeURIComponent(dateTo));
+
+    window.location.href = '/deals' + (params.length ? '?' + params.join('&') : '');
+}
+</script>
+
+<!-- Stats Bar - Compact -->
+<div class="grid grid-cols-5 gap-3 mb-4">
+    <div class="bg-white rounded-lg shadow p-3">
+        <p class="text-gray-500 text-xs">Pipeline Value</p>
+        <p class="text-xl font-bold text-slate-800">${{ "{:,.0f}".format(analytics.pipeline_value) }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-3">
+        <p class="text-gray-500 text-xs">Won Revenue</p>
+        <p class="text-xl font-bold text-green-600">${{ "{:,.0f}".format(analytics.won_value) }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-3">
+        <p class="text-gray-500 text-xs">Win Rate</p>
+        <p class="text-xl font-bold text-blue-600">{{ analytics.win_rate }}%</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-3">
+        <p class="text-gray-500 text-xs">Total Deals</p>
+        <p class="text-xl font-bold text-gray-700">{{ analytics.total_deals }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-3">
+        <p class="text-gray-500 text-xs">Avg Deal Size</p>
+        <p class="text-xl font-bold text-gray-700">${{ "{:,.0f}".format(analytics.avg_deal_value) }}</p>
+    </div>
+</div>
+
+<!-- Pipeline Board -->
+<div class="pipeline-board rounded-xl p-4">
+    <div class="flex gap-3 h-full">
+        {% for stage in stages %}
+        <div class="flex-1 min-w-0">
+            <div class="pipeline-column-wrapper h-full rounded-lg p-2
+                {% if stage == 'new_deal' %}bg-blue-50 border border-blue-200
+                {% elif stage == 'proposal' %}bg-purple-50 border border-purple-200
+                {% elif stage == 'negotiation' %}bg-yellow-50 border border-yellow-200
+                {% elif stage == 'closed_won' %}bg-green-50 border border-green-200
+                {% elif stage == 'closed_lost' %}bg-red-50 border border-red-200
+                {% else %}bg-gray-50 border border-gray-200{% endif %}">
+
+                <!-- Column Header -->
+                <div class="flex justify-between items-center mb-2 px-1">
+                    <h3 class="font-semibold text-sm
+                        {% if stage == 'new_deal' %}text-blue-700
+                        {% elif stage == 'proposal' %}text-purple-700
+                        {% elif stage == 'negotiation' %}text-yellow-700
+                        {% elif stage == 'closed_won' %}text-green-700
+                        {% elif stage == 'closed_lost' %}text-red-700
+                        {% else %}text-gray-700{% endif %}">
+                        {% if stage == 'new_deal' %}New Deal
+                        {% elif stage == 'closed_won' %}Closed Won
+                        {% elif stage == 'closed_lost' %}Closed Lost
+                        {% else %}{{ stage|replace('_', ' ')|title }}{% endif %}
+                    </h3>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500">${{ "{:,.0f}".format(pipeline[stage]|sum(attribute='value')) }}</span>
+                        <span class="text-xs font-medium px-1.5 py-0.5 rounded-full
+                            {% if stage == 'new_deal' %}bg-blue-200 text-blue-800
+                            {% elif stage == 'proposal' %}bg-purple-200 text-purple-800
+                            {% elif stage == 'negotiation' %}bg-yellow-200 text-yellow-800
+                            {% elif stage == 'closed_won' %}bg-green-200 text-green-800
+                            {% elif stage == 'closed_lost' %}bg-red-200 text-red-800
+                            {% else %}bg-gray-200 text-gray-800{% endif %}">
+                            {{ pipeline[stage]|length }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Deals Drop Zone -->
+                <div class="space-y-2 pipeline-column overflow-y-auto"
+                     style="max-height: calc(100vh - 280px);"
+                     data-stage="{{ stage }}"
+                     ondrop="dropDeal(event)"
+                     ondragover="allowDrop(event)"
+                     ondragenter="dragEnter(event)"
+                     ondragleave="dragLeave(event)">
+
+                    {% for deal in pipeline[stage] %}
+                    <div class="bg-white rounded-lg shadow-sm p-2.5 cursor-pointer deal-card border border-gray-100"
+                         draggable="true"
+                         ondragstart="dragStart(event)"
+                         data-deal-id="{{ deal.id }}"
+                         onclick="window.location='/deals/{{ deal.id }}'">
+                        <h4 class="font-medium text-gray-900 text-sm truncate">{{ deal.name }}</h4>
+                        <p class="text-base font-bold text-slate-800 mt-1">${{ "{:,.0f}".format(deal.value) }}</p>
+                        {% if deal.salesperson %}
+                        <p class="text-xs text-slate-600 mt-1">{{ deal.salesperson }}</p>
+                        {% endif %}
+                        {% if deal.contact_names %}
+                        <p class="text-xs text-gray-500 truncate">{{ deal.contact_names }}</p>
+                        {% endif %}
+                        {% if deal.utm_medium %}
+                        <div class="mt-1.5">
+                            <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700" title="Verified">
+                                ✓ {{ deal.utm_medium }}
+                            </span>
+                        </div>
+                        {% else %}
+                        <div class="mt-1.5">
+                            <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded bg-red-100 text-red-600">
+                                No source
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.pipeline-board {
+    background: #f8fafc;
+    min-height: calc(100vh - 220px);
+}
+.deal-card {
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+.deal-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #0a1622;
+}
+.deal-card.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+.pipeline-column {
+    transition: background-color 0.2s;
+    border-radius: 0.375rem;
+    padding: 0.25rem;
+    min-height: 100px;
+}
+.pipeline-column.drag-over {
+    background-color: rgba(10, 22, 34, 0.1);
+    outline: 2px dashed #0a1622;
+    outline-offset: -2px;
+}
+</style>
+
+<!-- Close Reason Modal -->
+<div id="closeReasonModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b">
+            <h3 id="closeReasonTitle" class="text-lg font-semibold text-gray-900">Close Reason</h3>
+        </div>
+        <div class="p-6">
+            <p id="closeReasonPrompt" class="text-sm text-gray-600 mb-3">Why is this deal being closed?</p>
+            <textarea id="closeReasonText" rows="3" required
+                      placeholder="Enter the reason for closing this deal..."
+                      class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700"></textarea>
+
+            <div id="closeReasonQuickSelect" class="mt-3">
+                <p class="text-sm text-gray-500 mb-2">Quick select:</p>
+                <div id="quickSelectButtons" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <p id="closeReasonError" class="text-red-600 text-sm mt-2 hidden">Please enter a reason before closing this deal.</p>
+        </div>
+        <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+            <button type="button" onclick="cancelCloseReason()"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                Cancel
+            </button>
+            <button type="button" onclick="submitCloseReason()"
+                    class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900">
+                Close Deal
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let draggedDeal = null;
+let pendingDealId = null;
+let pendingStage = null;
+let pendingColumn = null;
+
+const winReasons = ['Best pricing', 'Great relationship', 'Product fit', 'Timeline aligned', 'Better features'];
+const lossReasons = ['Went with competitor', 'Budget constraints', 'Project cancelled', 'No response', 'Timing not right'];
+
+function dragStart(event) {
+    draggedDeal = event.target;
+    event.target.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', event.target.dataset.dealId);
+}
+
+function dragEnd(event) {
+    event.target.classList.remove('dragging');
+    document.querySelectorAll('.pipeline-column').forEach(col => {
+        col.classList.remove('drag-over');
+    });
+}
+
+function allowDrop(event) {
+    event.preventDefault();
+}
+
+function dragEnter(event) {
+    event.preventDefault();
+    const column = event.target.closest('.pipeline-column');
+    if (column) {
+        column.classList.add('drag-over');
+    }
+}
+
+function dragLeave(event) {
+    const column = event.target.closest('.pipeline-column');
+    if (column && !column.contains(event.relatedTarget)) {
+        column.classList.remove('drag-over');
+    }
+}
+
+function dropDeal(event) {
+    event.preventDefault();
+    const column = event.target.closest('.pipeline-column');
+    if (!column || !draggedDeal) return;
+
+    column.classList.remove('drag-over');
+
+    const dealId = event.dataTransfer.getData('text/plain');
+    const newStage = column.dataset.stage;
+
+    // If moving to a closed stage, show the modal
+    if (newStage === 'closed_won' || newStage === 'closed_lost') {
+        pendingDealId = dealId;
+        pendingStage = newStage;
+        pendingColumn = column;
+        showCloseReasonModal(newStage);
+        return;
+    }
+
+    // Otherwise, proceed with the stage update
+    completeStageUpdate(dealId, newStage, column, null);
+}
+
+function showCloseReasonModal(stage) {
+    const modal = document.getElementById('closeReasonModal');
+    const title = document.getElementById('closeReasonTitle');
+    const prompt = document.getElementById('closeReasonPrompt');
+    const quickButtons = document.getElementById('quickSelectButtons');
+    const textarea = document.getElementById('closeReasonText');
+    const error = document.getElementById('closeReasonError');
+
+    // Reset
+    textarea.value = '';
+    error.classList.add('hidden');
+
+    if (stage === 'closed_won') {
+        title.textContent = 'Win Reason';
+        prompt.textContent = 'Why did we win this deal?';
+        quickButtons.innerHTML = winReasons.map(r =>
+            `<button type="button" onclick="setQuickReason('${r}')" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">${r}</button>`
+        ).join('');
+    } else {
+        title.textContent = 'Loss Reason';
+        prompt.textContent = 'Why did we lose this deal?';
+        quickButtons.innerHTML = lossReasons.map(r =>
+            `<button type="button" onclick="setQuickReason('${r}')" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">${r}</button>`
+        ).join('');
+    }
+
+    modal.classList.remove('hidden');
+    textarea.focus();
+}
+
+function setQuickReason(text) {
+    document.getElementById('closeReasonText').value = text;
+}
+
+function cancelCloseReason() {
+    document.getElementById('closeReasonModal').classList.add('hidden');
+    pendingDealId = null;
+    pendingStage = null;
+    pendingColumn = null;
+    // Put the card back to its original position by reloading
+    window.location.reload();
+}
+
+function submitCloseReason() {
+    const reason = document.getElementById('closeReasonText').value.trim();
+    const error = document.getElementById('closeReasonError');
+
+    if (!reason) {
+        error.classList.remove('hidden');
+        return;
+    }
+
+    error.classList.add('hidden');
+    document.getElementById('closeReasonModal').classList.add('hidden');
+
+    completeStageUpdate(pendingDealId, pendingStage, pendingColumn, reason);
+}
+
+function completeStageUpdate(dealId, newStage, column, closeReason) {
+    if (draggedDeal) {
+        column.appendChild(draggedDeal);
+        draggedDeal.classList.remove('dragging');
+    }
+
+    const payload = { stage: newStage };
+    if (closeReason) {
+        payload.close_reason = closeReason;
+    }
+
+    fetch(`/api/deals/${dealId}/stage`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        window.location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        window.location.reload();
+    });
+}
+
+document.querySelectorAll('.deal-card').forEach(card => {
+    card.addEventListener('dragend', dragEnd);
+});
+
+// Close modal on escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('closeReasonModal');
+        if (!modal.classList.contains('hidden')) {
+            cancelCloseReason();
+        }
+    }
+});
+
+// Close modal on background click
+document.getElementById('closeReasonModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cancelCloseReason();
+    }
+});
+</script>
+{% endblock %}
