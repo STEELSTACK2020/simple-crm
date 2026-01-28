@@ -989,6 +989,8 @@ def get_leads_by_month_medium(year=None):
     # If no year specified, use current year
     if not year:
         year = str(datetime.now().year)
+    else:
+        year = str(year)
 
     # All 12 months for the year
     all_months = [f"{year}-{str(m).zfill(2)}" for m in range(1, 13)]
@@ -996,16 +998,28 @@ def get_leads_by_month_medium(year=None):
                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
     # Get all leads grouped by month and medium for the specified year
-    cursor.execute("""
-        SELECT
-            substr(created_at, 1, 7) as month,
-            COALESCE(utm_medium, 'Unknown') as medium,
-            COUNT(*) as lead_count
-        FROM contacts
-        WHERE substr(created_at, 1, 4) = ?
-        GROUP BY substr(created_at, 1, 7), utm_medium
-        ORDER BY month, lead_count DESC
-    """, (year,))
+    if USE_POSTGRES:
+        cursor.execute("""
+            SELECT
+                TO_CHAR(created_at::timestamp, 'YYYY-MM') as month,
+                COALESCE(utm_medium, 'Unknown') as medium,
+                COUNT(*) as lead_count
+            FROM contacts
+            WHERE EXTRACT(YEAR FROM created_at::timestamp) = %s
+            GROUP BY TO_CHAR(created_at::timestamp, 'YYYY-MM'), COALESCE(utm_medium, 'Unknown')
+            ORDER BY month, lead_count DESC
+        """, (int(year),))
+    else:
+        cursor.execute("""
+            SELECT
+                substr(created_at, 1, 7) as month,
+                COALESCE(utm_medium, 'Unknown') as medium,
+                COUNT(*) as lead_count
+            FROM contacts
+            WHERE substr(created_at, 1, 4) = ?
+            GROUP BY substr(created_at, 1, 7), utm_medium
+            ORDER BY month, lead_count DESC
+        """, (year,))
     raw_data = [dict(row) for row in cursor.fetchall()]
 
     # Get all unique mediums across all data
@@ -1014,9 +1028,30 @@ def get_leads_by_month_medium(year=None):
         FROM contacts
     """)
     mediums = [row['medium'] for row in cursor.fetchall()]
+    if not mediums:
+        mediums = ['Unknown']
 
-    # Get available years for the dropdown (2024 through 2030)
-    available_years = [str(y) for y in range(2030, 2023, -1)]  # 2030, 2029, 2028, 2027, 2026, 2025, 2024
+    # Get available years for the dropdown
+    if USE_POSTGRES:
+        cursor.execute("""
+            SELECT DISTINCT EXTRACT(YEAR FROM created_at::timestamp) as year
+            FROM contacts
+            WHERE created_at IS NOT NULL
+            ORDER BY year DESC
+        """)
+        available_years = [str(int(row[0])) for row in cursor.fetchall() if row[0]]
+    else:
+        cursor.execute("""
+            SELECT DISTINCT substr(created_at, 1, 4) as year
+            FROM contacts
+            WHERE created_at IS NOT NULL
+            ORDER BY year DESC
+        """)
+        available_years = [row[0] for row in cursor.fetchall() if row[0]]
+
+    # Ensure current year is in list
+    if year not in available_years:
+        available_years.insert(0, year)
 
     # Build structured data for chart
     # Format: { medium: [count_jan, count_feb, ...] }
