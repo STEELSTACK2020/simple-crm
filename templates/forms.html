@@ -303,8 +303,9 @@ function scrmSubmitPreview(e) {
         btn.disabled = false;
         btn.textContent = 'GET YOUR SHEET TOGETHER ➤';
     })
-    .catch(function() {
-        msgEl.innerHTML = '<div class="scrm-message scrm-error">Network error. Please try again.</div>';
+    .catch(function(err) {
+        console.error('Form error:', err);
+        msgEl.innerHTML = '<div class="scrm-message scrm-error">Network error: ' + err.message + '</div>';
         btn.disabled = false;
         btn.textContent = 'GET YOUR SHEET TOGETHER ➤';
     });
