@@ -583,14 +583,18 @@
 
     // ========== LEADS BY MONTH & MEDIUM CHART ==========
     const leadsChartColors = [
-        'rgba(16, 185, 129, 0.8)',   // Green
         'rgba(59, 130, 246, 0.8)',   // Blue
-        'rgba(245, 158, 11, 0.8)',   // Yellow
+        'rgba(249, 115, 22, 0.8)',   // Orange
+        'rgba(34, 197, 94, 0.8)',    // Green
         'rgba(239, 68, 68, 0.8)',    // Red
-        'rgba(139, 92, 246, 0.8)',   // Purple
+        'rgba(168, 85, 247, 0.8)',   // Purple
+        'rgba(234, 179, 8, 0.8)',    // Yellow
+        'rgba(6, 182, 212, 0.8)',    // Cyan
         'rgba(236, 72, 153, 0.8)',   // Pink
-        'rgba(20, 184, 166, 0.8)',   // Teal
-        'rgba(107, 114, 128, 0.8)',  // Gray
+        'rgba(120, 53, 15, 0.8)',    // Brown
+        'rgba(30, 58, 138, 0.8)',    // Navy
+        'rgba(163, 230, 53, 0.8)',   // Lime
+        'rgba(251, 146, 60, 0.8)',   // Coral
     ];
 
     let currentLeadsYear = '{{ leads_by_month.year }}';
@@ -632,10 +636,11 @@
                         position: 'bottom'
                     },
                     tooltip: {
+                        mode: 'index',
                         callbacks: {
                             title: function(context) {
                                 const monthIndex = context[0].dataIndex;
-                                return data.month_names[monthIndex] + ' ' + currentLeadsYear + ' (Total: ' + data.totals[monthIndex] + ' leads)';
+                                return data.month_names[monthIndex] + ' ' + currentLeadsYear;
                             },
                             label: function(context) {
                                 return `${context.dataset.label}: ${context.raw} leads`;
@@ -666,21 +671,31 @@
                 afterDatasetsDraw: function(chart) {
                     const ctx = chart.ctx;
                     chart.data.labels.forEach((label, index) => {
-                        const total = data.totals[index];
-                        if (total > 0) {
-                            const meta = chart.getDatasetMeta(chart.data.datasets.length - 1);
-                            const bar = meta.data[index];
-                            if (bar) {
-                                const x = bar.x;
-                                const y = bar.y - 8;
-                                ctx.save();
-                                ctx.fillStyle = '#374151';
-                                ctx.font = 'bold 11px Arial';
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'bottom';
-                                ctx.fillText(total, x, y);
-                                ctx.restore();
+                        // Calculate total from visible datasets only
+                        let visibleTotal = 0;
+                        let topY = null;
+                        let barX = null;
+
+                        chart.data.datasets.forEach((dataset, datasetIndex) => {
+                            if (chart.isDatasetVisible(datasetIndex)) {
+                                visibleTotal += dataset.data[index] || 0;
+                                const meta = chart.getDatasetMeta(datasetIndex);
+                                const bar = meta.data[index];
+                                if (bar && (topY === null || bar.y < topY)) {
+                                    topY = bar.y;
+                                    barX = bar.x;
+                                }
                             }
+                        });
+
+                        if (visibleTotal > 0 && topY !== null) {
+                            ctx.save();
+                            ctx.fillStyle = '#374151';
+                            ctx.font = 'bold 11px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            ctx.fillText(visibleTotal, barX, topY - 5);
+                            ctx.restore();
                         }
                     });
                 }

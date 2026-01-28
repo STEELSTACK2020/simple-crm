@@ -1052,7 +1052,7 @@ def get_leads_by_month_medium(year=None):
                 WHERE created_at IS NOT NULL
                 ORDER BY year DESC
             """)
-            available_years = [str(int(row[0])) for row in cursor.fetchall() if row[0]]
+            available_years = [str(int(row['year'])) for row in cursor.fetchall() if row['year']]
         else:
             cursor.execute("""
                 SELECT DISTINCT substr(created_at, 1, 4) as year
@@ -1078,6 +1078,10 @@ def get_leads_by_month_medium(year=None):
                         count = row['lead_count']
                         break
                 chart_data[medium].append(count)
+
+        # Sort mediums by total leads (largest to smallest)
+        medium_totals = {medium: sum(chart_data[medium]) for medium in mediums}
+        mediums = sorted(mediums, key=lambda m: medium_totals[m], reverse=True)
 
         # Calculate totals per month
         monthly_totals = []

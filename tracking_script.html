@@ -1,0 +1,121 @@
+<!--
+  SIMPLE CRM - VISITOR TRACKING SCRIPT
+
+  Add this to Squarespace: Settings > Advanced > Code Injection > HEADER
+  This tracks the FIRST visit source and stores it in a cookie for 90 days.
+-->
+<script>
+(function() {
+  var COOKIE_NAME = 'scrm_source';
+  var COOKIE_DAYS = 90;
+
+  // Check if we already have tracking data
+  function getCookie(name) {
+    var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+  }
+
+  function setCookie(name, value, days) {
+    var expires = new Date(Date.now() + days * 864e5).toUTCString();
+    document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax';
+  }
+
+  // Parse referrer to get source (using HubSpot naming conventions)
+  function parseReferrer(ref) {
+    if (!ref) return { source: 'Direct', medium: 'Direct Traffic' };
+
+    try {
+      var hostname = new URL(ref).hostname.toLowerCase();
+
+      // Search engines
+      if (hostname.includes('google.')) return { source: 'Google', medium: 'Organic Search' };
+      if (hostname.includes('bing.')) return { source: 'Bing', medium: 'Organic Search' };
+      if (hostname.includes('yahoo.')) return { source: 'Yahoo', medium: 'Organic Search' };
+      if (hostname.includes('duckduckgo.')) return { source: 'DuckDuckGo', medium: 'Organic Search' };
+
+      // Social
+      if (hostname.includes('facebook.') || hostname.includes('fb.')) return { source: 'Facebook', medium: 'Organic Social' };
+      if (hostname.includes('instagram.')) return { source: 'Instagram', medium: 'Organic Social' };
+      if (hostname.includes('linkedin.')) return { source: 'LinkedIn', medium: 'Organic Social' };
+      if (hostname.includes('twitter.') || hostname.includes('t.co')) return { source: 'Twitter', medium: 'Organic Social' };
+      if (hostname.includes('youtube.')) return { source: 'YouTube', medium: 'Organic Social' };
+      if (hostname.includes('tiktok.')) return { source: 'TikTok', medium: 'Organic Social' };
+      if (hostname.includes('pinterest.')) return { source: 'Pinterest', medium: 'Organic Social' };
+
+      // Default to referral
+      return { source: hostname.replace('www.', ''), medium: 'Referrals' };
+    } catch (e) {
+      return { source: 'Direct', medium: 'Direct Traffic' };
+    }
+  }
+
+  // Detect paid click IDs (using HubSpot naming conventions)
+  function detectPaidSource(params) {
+    // Google Ads (gclid)
+    if (params.get('gclid')) {
+      return { source: 'Google', medium: 'Paid Search', campaign: params.get('utm_campaign') || 'Google Ads' };
+    }
+    // Facebook/Meta Ads (fbclid)
+    if (params.get('fbclid')) {
+      return { source: 'Facebook', medium: 'Paid Social', campaign: params.get('utm_campaign') || 'Facebook Ads' };
+    }
+    // Microsoft/Bing Ads (msclkid)
+    if (params.get('msclkid')) {
+      return { source: 'Bing', medium: 'Paid Search', campaign: params.get('utm_campaign') || 'Bing Ads' };
+    }
+    // LinkedIn Ads
+    if (params.get('li_fat_id')) {
+      return { source: 'LinkedIn', medium: 'Paid Social', campaign: params.get('utm_campaign') || 'LinkedIn Ads' };
+    }
+    return null;
+  }
+
+  // Main tracking logic
+  function track() {
+    // If cookie already exists, don't overwrite (first-touch attribution)
+    if (getCookie(COOKIE_NAME)) return;
+
+    var params = new URLSearchParams(window.location.search);
+    var data = {
+      source: '',
+      medium: '',
+      campaign: '',
+      term: '',
+      content: '',
+      landing_page: window.location.pathname,
+      referrer: document.referrer,
+      timestamp: new Date().toISOString()
+    };
+
+    // Priority 1: Explicit UTM parameters (user set these intentionally)
+    if (params.get('utm_source')) {
+      data.source = params.get('utm_source');
+      data.medium = params.get('utm_medium') || '';
+      data.campaign = params.get('utm_campaign') || '';
+      data.term = params.get('utm_term') || '';
+      data.content = params.get('utm_content') || '';
+    }
+    // Priority 2: Ad platform click IDs (auto-tagged)
+    else {
+      var paidSource = detectPaidSource(params);
+      if (paidSource) {
+        data.source = paidSource.source;
+        data.medium = paidSource.medium;
+        data.campaign = paidSource.campaign;
+      }
+      // Priority 3: Parse the referrer
+      else {
+        var ref = parseReferrer(document.referrer);
+        data.source = ref.source;
+        data.medium = ref.medium;
+      }
+    }
+
+    // Store in cookie
+    setCookie(COOKIE_NAME, JSON.stringify(data), COOKIE_DAYS);
+  }
+
+  // Run tracking
+  track();
+})();
+</script>

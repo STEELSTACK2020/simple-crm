@@ -31,3 +31,4 @@ OOB_backup/
 # OS
 .DS_Store
 Thumbs.db
+ga_token.json
