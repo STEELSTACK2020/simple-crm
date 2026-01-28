@@ -388,6 +388,79 @@ def contact_add():
     return render_template('contact_add.html', mediums=get_utm_mediums())
 
 
+@app.route('/contacts/import', methods=['POST'])
+@login_required
+def import_contacts():
+    """Import contacts from a CSV file."""
+    import csv
+    import io
+
+    if 'csv_file' not in request.files:
+        return redirect(url_for('contacts_list') + '?error=No+file+uploaded')
+
+    file = request.files['csv_file']
+    if file.filename == '':
+        return redirect(url_for('contacts_list') + '?error=No+file+selected')
+
+    if not file.filename.endswith('.csv'):
+        return redirect(url_for('contacts_list') + '?error=Please+upload+a+CSV+file')
+
+    try:
+        # Read CSV file
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        reader = csv.DictReader(stream)
+
+        imported = 0
+        skipped = 0
+        errors = []
+
+        for row in reader:
+            # Get values with flexible column names
+            first_name = row.get('first_name', row.get('First Name', row.get('firstname', ''))).strip()
+            last_name = row.get('last_name', row.get('Last Name', row.get('lastname', ''))).strip()
+            email = row.get('email', row.get('Email', row.get('EMAIL', ''))).strip()
+            phone = row.get('phone', row.get('Phone', row.get('PHONE', ''))).strip()
+            notes = row.get('notes', row.get('Notes', row.get('NOTES', ''))).strip()
+            utm_source = row.get('utm_source', row.get('source', row.get('Source', ''))).strip()
+            utm_medium = row.get('utm_medium', row.get('medium', row.get('Medium', ''))).strip()
+
+            # Skip if no email (required field)
+            if not email:
+                skipped += 1
+                continue
+
+            # Check if contact already exists
+            existing = get_contact_by_email(email)
+            if existing:
+                skipped += 1
+                continue
+
+            # Add contact
+            result = add_contact(
+                first_name=first_name or 'Unknown',
+                last_name=last_name or '',
+                email=email,
+                phone=phone or None,
+                notes=notes or None,
+                utm_source=utm_source or None,
+                utm_medium=utm_medium or None
+            )
+
+            if result.get('success'):
+                imported += 1
+            else:
+                skipped += 1
+
+        message = f"Imported+{imported}+contacts"
+        if skipped > 0:
+            message += f"+({skipped}+skipped+-+duplicates+or+missing+email)"
+
+        return redirect(url_for('contacts_list') + f'?success={message}')
+
+    except Exception as e:
+        return redirect(url_for('contacts_list') + f'?error=Import+failed:+{str(e)[:50]}')
+
+
 # ============== Traffic Dashboard Routes ==============
 
 @app.route('/traffic')
