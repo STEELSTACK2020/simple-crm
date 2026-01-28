@@ -416,8 +416,14 @@ def import_contacts():
         return redirect(url_for('contacts_list') + '?error=Please+upload+a+CSV+file')
 
     try:
-        # Read CSV file
-        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        # Read CSV file - try UTF-8 first, fall back to Windows encoding
+        raw_data = file.stream.read()
+        try:
+            decoded = raw_data.decode("utf-8")
+        except UnicodeDecodeError:
+            decoded = raw_data.decode("cp1252")  # Windows/Excel encoding
+
+        stream = io.StringIO(decoded, newline=None)
         reader = csv.DictReader(stream)
 
         imported = 0
