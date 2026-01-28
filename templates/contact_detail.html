@@ -159,16 +159,28 @@
                 </dl>
             </div>
 
-            <!-- Notes -->
+            <!-- Customer Message -->
             <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Notes</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Customer Message</h3>
                 <div class="bg-gray-50 rounded-lg p-4 min-h-[100px]">
                     {% if contact.notes %}
                     <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ contact.notes }}</p>
                     {% else %}
-                    <p class="text-sm text-gray-400 italic">No notes added</p>
+                    <p class="text-sm text-gray-400 italic">No message from customer</p>
                     {% endif %}
                 </div>
+            </div>
+        </div>
+
+        <!-- Sales Notes -->
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Sales Notes</h3>
+            <div class="bg-blue-50 rounded-lg p-4 min-h-[100px]">
+                {% if contact.sales_notes %}
+                <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ contact.sales_notes }}</p>
+                {% else %}
+                <p class="text-sm text-gray-400 italic">No sales notes added</p>
+                {% endif %}
             </div>
         </div>
 

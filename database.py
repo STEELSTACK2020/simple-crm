@@ -539,7 +539,8 @@ def init_database():
 def add_contact(first_name, last_name, email, phone=None,
                 utm_source=None, utm_medium=None, utm_campaign=None,
                 utm_term=None, utm_content=None, deal_value=0,
-                deal_closed_date=None, notes=None, landing_page=None, referrer=None):
+                deal_closed_date=None, notes=None, landing_page=None, referrer=None,
+                sales_notes=None):
     """Add a new contact to the database."""
     conn = get_connection()
     cursor = conn.cursor()
@@ -549,11 +550,11 @@ def add_contact(first_name, last_name, email, phone=None,
             INSERT INTO contacts (
                 first_name, last_name, email, phone,
                 utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-                deal_value, deal_closed_date, notes, landing_page, referrer
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                deal_value, deal_closed_date, notes, landing_page, referrer, sales_notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (first_name, last_name, email, phone,
               utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-              deal_value, deal_closed_date, notes, landing_page, referrer))
+              deal_value, deal_closed_date, notes, landing_page, referrer, sales_notes))
         conn.commit()
         contact_id = cursor.lastrowid
         return {"success": True, "id": contact_id}
@@ -573,7 +574,7 @@ def update_contact(contact_id, **kwargs):
         'first_name', 'last_name', 'email', 'phone',
         'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
         'deal_value', 'deal_closed_date', 'notes', 'last_activity_date', 'company_id',
-        'original_source_details'
+        'original_source_details', 'sales_notes'
     ]
 
     updates = []
@@ -3053,6 +3054,36 @@ def init_fix_requests_table():
 
     conn.commit()
     conn.close()
+
+
+def add_sales_notes_column():
+    """Add sales_notes column to contacts table if it doesn't exist."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        if USE_POSTGRES:
+            # Check if column exists
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'contacts' AND column_name = 'sales_notes'
+            """)
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE contacts ADD COLUMN sales_notes TEXT")
+                conn.commit()
+                print("Added sales_notes column to contacts table")
+        else:
+            # SQLite - try to add, ignore if exists
+            try:
+                cursor.execute("ALTER TABLE contacts ADD COLUMN sales_notes TEXT")
+                conn.commit()
+                print("Added sales_notes column to contacts table")
+            except:
+                pass  # Column already exists
+    except Exception as e:
+        print(f"Note: sales_notes column may already exist: {e}")
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":

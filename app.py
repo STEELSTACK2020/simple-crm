@@ -36,7 +36,9 @@ from database import (
     # Quick notes
     get_quick_notes, save_quick_notes,
     # Fix requests
-    add_fix_request, get_all_fix_requests, init_fix_requests_table, update_fix_request_status
+    add_fix_request, get_all_fix_requests, init_fix_requests_table, update_fix_request_status,
+    # Migrations
+    add_sales_notes_column
 )
 from pdf_generator import generate_quote_pdf
 from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RATE_PER_MILE
@@ -76,6 +78,7 @@ def format_date_filter(value, format='%Y-%m-%d'):
 # Initialize database on startup
 init_database()
 init_fix_requests_table()  # Create fix_requests table if not exists
+add_sales_notes_column()  # Add sales_notes column to contacts if not exists
 
 
 # ============== Authentication ==============
@@ -347,6 +350,7 @@ def contact_edit(contact_id):
             'deal_value': float(request.form.get('deal_value') or 0),
             'deal_closed_date': request.form.get('deal_closed_date') or None,
             'notes': request.form.get('notes'),
+            'sales_notes': request.form.get('sales_notes'),
         }
         update_contact(contact_id, **update_data)
         return redirect(url_for('contact_detail', contact_id=contact_id))

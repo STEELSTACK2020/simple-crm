@@ -122,12 +122,22 @@
                 </div>
             </div>
 
-            <!-- Notes -->
+            <!-- Customer Message -->
             <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Notes</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Customer Message</h3>
                 <textarea name="notes" rows="4"
-                          placeholder="Add any notes about this contact..."
-                          class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">{{ contact.notes or '' }}</textarea>
+                          placeholder="Message or notes from the customer..."
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700 bg-gray-50">{{ contact.notes or '' }}</textarea>
+                <p class="text-xs text-gray-500 mt-1">Original message from the customer (from form submissions, etc.)</p>
+            </div>
+
+            <!-- Sales Notes -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Sales Notes</h3>
+                <textarea name="sales_notes" rows="4"
+                          placeholder="Add internal sales notes about this contact..."
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50">{{ contact.sales_notes or '' }}</textarea>
+                <p class="text-xs text-gray-500 mt-1">Internal notes for the sales team (call notes, follow-up reminders, etc.)</p>
             </div>
 
             <!-- Actions -->
