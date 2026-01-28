@@ -38,7 +38,7 @@ from database import (
     # Fix requests
     add_fix_request, get_all_fix_requests, init_fix_requests_table, update_fix_request_status,
     # Migrations
-    add_sales_notes_column
+    add_sales_notes_column, add_contact_salesperson_column
 )
 from pdf_generator import generate_quote_pdf
 from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RATE_PER_MILE
@@ -79,6 +79,7 @@ def format_date_filter(value, format='%Y-%m-%d'):
 init_database()
 init_fix_requests_table()  # Create fix_requests table if not exists
 add_sales_notes_column()  # Add sales_notes column to contacts if not exists
+add_contact_salesperson_column()  # Add salesperson_id column to contacts if not exists
 
 
 # ============== Authentication ==============
@@ -334,6 +335,10 @@ def contact_edit(contact_id):
         company_id = request.form.get('company_id')
         company_id = int(company_id) if company_id else None
 
+        # Get salesperson_id
+        salesperson_id = request.form.get('salesperson_id')
+        salesperson_id = int(salesperson_id) if salesperson_id else None
+
         # Update contact with form data
         update_data = {
             'first_name': request.form.get('first_name'),
@@ -341,6 +346,7 @@ def contact_edit(contact_id):
             'email': request.form.get('email'),
             'phone': request.form.get('phone'),
             'company_id': company_id,
+            'salesperson_id': salesperson_id,
             'utm_source': request.form.get('utm_source'),
             'utm_medium': request.form.get('utm_medium'),
             'utm_campaign': request.form.get('utm_campaign'),
@@ -355,7 +361,7 @@ def contact_edit(contact_id):
         update_contact(contact_id, **update_data)
         return redirect(url_for('contact_detail', contact_id=contact_id))
 
-    return render_template('contact_edit.html', contact=contact, companies=get_all_companies(), mediums=get_utm_mediums())
+    return render_template('contact_edit.html', contact=contact, companies=get_all_companies(), mediums=get_utm_mediums(), salespeople=get_salespeople())
 
 
 @app.route('/contacts/<int:contact_id>/delete', methods=['POST'])

@@ -69,6 +69,16 @@
                             {% endif %}
                         </dd>
                     </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Assigned Salesperson</dt>
+                        <dd class="text-sm text-gray-900 mt-1">
+                            {% if contact.salesperson_name %}
+                            <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 font-medium">{{ contact.salesperson_name }}</span>
+                            {% else %}
+                            <span class="text-gray-400">Not assigned</span>
+                            {% endif %}
+                        </dd>
+                    </div>
                 </dl>
             </div>
 

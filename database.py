@@ -574,7 +574,7 @@ def update_contact(contact_id, **kwargs):
         'first_name', 'last_name', 'email', 'phone',
         'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
         'deal_value', 'deal_closed_date', 'notes', 'last_activity_date', 'company_id',
-        'original_source_details', 'sales_notes'
+        'original_source_details', 'sales_notes', 'salesperson_id'
     ]
 
     updates = []
@@ -668,10 +668,15 @@ def get_contacts_by_activity(limit=100, offset=0):
 
 
 def get_contact(contact_id):
-    """Get a single contact by ID."""
+    """Get a single contact by ID, including salesperson info."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM contacts WHERE id = ?", (contact_id,))
+    cursor.execute("""
+        SELECT c.*, s.name as salesperson_name
+        FROM contacts c
+        LEFT JOIN salespeople s ON c.salesperson_id = s.id
+        WHERE c.id = ?
+    """, (contact_id,))
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
@@ -3082,6 +3087,36 @@ def add_sales_notes_column():
                 pass  # Column already exists
     except Exception as e:
         print(f"Note: sales_notes column may already exist: {e}")
+    finally:
+        conn.close()
+
+
+def add_contact_salesperson_column():
+    """Add salesperson_id column to contacts table if it doesn't exist."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        if USE_POSTGRES:
+            # Check if column exists
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'contacts' AND column_name = 'salesperson_id'
+            """)
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE contacts ADD COLUMN salesperson_id INTEGER REFERENCES salespeople(id) ON DELETE SET NULL")
+                conn.commit()
+                print("Added salesperson_id column to contacts table")
+        else:
+            # SQLite - try to add, ignore if exists
+            try:
+                cursor.execute("ALTER TABLE contacts ADD COLUMN salesperson_id INTEGER REFERENCES salespeople(id)")
+                conn.commit()
+                print("Added salesperson_id column to contacts table")
+            except:
+                pass  # Column already exists
+    except Exception as e:
+        print(f"Note: salesperson_id column may already exist: {e}")
     finally:
         conn.close()
 

@@ -38,12 +38,21 @@
                         <input type="tel" name="phone" value="{{ contact.phone or '' }}"
                                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
                     </div>
-                    <div class="md:col-span-2">
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Company</label>
                         <select name="company_id" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
                             <option value="">-- Select Company --</option>
                             {% for company in companies %}
                             <option value="{{ company.id }}" {% if contact.company_id == company.id %}selected{% endif %}>{{ company.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Assigned Salesperson</label>
+                        <select name="salesperson_id" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 bg-green-50">
+                            <option value="">-- Select Salesperson --</option>
+                            {% for sp in salespeople %}
+                            <option value="{{ sp.id }}" {% if contact.salesperson_id == sp.id %}selected{% endif %}>{{ sp.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
