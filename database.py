@@ -715,7 +715,12 @@ def get_all_contacts(limit=100, offset=0, sort_by='created_at', sort_dir='desc')
 
     sort_direction = 'DESC' if sort_dir.lower() == 'desc' else 'ASC'
 
-    query = f"SELECT * FROM contacts ORDER BY {sort_by} {sort_direction} LIMIT ? OFFSET ?"
+    # Use correct placeholder for PostgreSQL vs SQLite
+    if USE_POSTGRES:
+        query = f"SELECT * FROM contacts ORDER BY {sort_by} {sort_direction} LIMIT %s OFFSET %s"
+    else:
+        query = f"SELECT * FROM contacts ORDER BY {sort_by} {sort_direction} LIMIT ? OFFSET ?"
+
     cursor.execute(query, (limit, offset))
     rows = cursor.fetchall()
     conn.close()
@@ -737,11 +742,21 @@ def search_contacts(query):
     conn = get_connection()
     cursor = conn.cursor()
     search_term = f"%{query}%"
-    cursor.execute("""
-        SELECT * FROM contacts
-        WHERE first_name LIKE ? OR last_name LIKE ? OR email LIKE ?
-        ORDER BY created_at DESC
-    """, (search_term, search_term, search_term))
+
+    # Use ILIKE for PostgreSQL (case-insensitive), LIKE for SQLite
+    if USE_POSTGRES:
+        cursor.execute("""
+            SELECT * FROM contacts
+            WHERE first_name ILIKE %s OR last_name ILIKE %s OR email ILIKE %s
+            ORDER BY created_at DESC
+        """, (search_term, search_term, search_term))
+    else:
+        cursor.execute("""
+            SELECT * FROM contacts
+            WHERE first_name LIKE ? OR last_name LIKE ? OR email LIKE ?
+            ORDER BY created_at DESC
+        """, (search_term, search_term, search_term))
+
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
@@ -1237,27 +1252,32 @@ def get_deals_by_stage(salesperson=None, stage_filter=None, search=None, date_fr
     # If filtering by specific stage, only query that stage
     stages_to_query = [stage_filter] if stage_filter and stage_filter in DEAL_STAGES else DEAL_STAGES
 
+    # Use appropriate syntax for PostgreSQL vs SQLite
+    placeholder = "%s" if USE_POSTGRES else "?"
+    concat_func = "STRING_AGG(c.first_name || ' ' || c.last_name, ', ')" if USE_POSTGRES else "GROUP_CONCAT(c.first_name || ' ' || c.last_name, ', ')"
+    like_op = "ILIKE" if USE_POSTGRES else "LIKE"
+
     pipeline = {}
     for stage in DEAL_STAGES:
         if stage in stages_to_query:
             # Build query with optional filters
-            query = """
+            query = f"""
                 SELECT d.*,
-                       (SELECT GROUP_CONCAT(c.first_name || ' ' || c.last_name, ', ')
+                       (SELECT {concat_func}
                         FROM contacts c
                         JOIN deal_contacts dc ON c.id = dc.contact_id
                         WHERE dc.deal_id = d.id) as contact_names
                 FROM deals d
-                WHERE d.stage = ?
+                WHERE d.stage = {placeholder}
             """
             params = [stage]
 
             if salesperson:
-                query += " AND d.salesperson = ?"
+                query += f" AND d.salesperson = {placeholder}"
                 params.append(salesperson)
 
             if search:
-                query += " AND d.name LIKE ?"
+                query += f" AND d.name {like_op} {placeholder}"
                 params.append(f"%{search}%")
 
             # Use actual_close_date for closed deals, created_at for open deals
@@ -1265,17 +1285,17 @@ def get_deals_by_stage(salesperson=None, stage_filter=None, search=None, date_fr
             date_field = "d.actual_close_date" if is_closed_stage else "d.created_at"
 
             if date_from:
-                query += f" AND {date_field} >= ?"
+                query += f" AND {date_field} >= {placeholder}"
                 params.append(date_from)
 
             if date_to:
                 if is_closed_stage:
                     # actual_close_date is just a date, no time component
-                    query += f" AND {date_field} <= ?"
+                    query += f" AND {date_field} <= {placeholder}"
                     params.append(date_to)
                 else:
                     # created_at includes time, so include full day
-                    query += f" AND {date_field} <= ?"
+                    query += f" AND {date_field} <= {placeholder}"
                     params.append(date_to + " 23:59:59")
 
             query += " ORDER BY d.updated_at DESC"
@@ -1530,11 +1550,21 @@ def search_deals(query):
     conn = get_connection()
     cursor = conn.cursor()
     search_term = f"%{query}%"
-    cursor.execute("""
-        SELECT * FROM deals
-        WHERE name LIKE ?
-        ORDER BY created_at DESC
-    """, (search_term,))
+
+    # Use ILIKE for PostgreSQL (case-insensitive), LIKE for SQLite
+    if USE_POSTGRES:
+        cursor.execute("""
+            SELECT * FROM deals
+            WHERE name ILIKE %s
+            ORDER BY created_at DESC
+        """, (search_term,))
+    else:
+        cursor.execute("""
+            SELECT * FROM deals
+            WHERE name LIKE ?
+            ORDER BY created_at DESC
+        """, (search_term,))
+
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
@@ -2065,11 +2095,21 @@ def search_products(query):
     conn = get_connection()
     cursor = conn.cursor()
     search_term = f"%{query}%"
-    cursor.execute("""
-        SELECT * FROM products
-        WHERE (name LIKE ? OR sku LIKE ? OR description LIKE ?) AND is_active = 1
-        ORDER BY name
-    """, (search_term, search_term, search_term))
+
+    # Use ILIKE for PostgreSQL (case-insensitive), LIKE for SQLite
+    if USE_POSTGRES:
+        cursor.execute("""
+            SELECT * FROM products
+            WHERE (name ILIKE %s OR sku ILIKE %s OR description ILIKE %s) AND is_active = 1
+            ORDER BY name
+        """, (search_term, search_term, search_term))
+    else:
+        cursor.execute("""
+            SELECT * FROM products
+            WHERE (name LIKE ? OR sku LIKE ? OR description LIKE ?) AND is_active = 1
+            ORDER BY name
+        """, (search_term, search_term, search_term))
+
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
@@ -2186,11 +2226,21 @@ def search_companies(query):
     conn = get_connection()
     cursor = conn.cursor()
     search_term = f"%{query}%"
-    cursor.execute("""
-        SELECT * FROM companies
-        WHERE name LIKE ?
-        ORDER BY name
-    """, (search_term,))
+
+    # Use ILIKE for PostgreSQL (case-insensitive), LIKE for SQLite
+    if USE_POSTGRES:
+        cursor.execute("""
+            SELECT * FROM companies
+            WHERE name ILIKE %s
+            ORDER BY name
+        """, (search_term,))
+    else:
+        cursor.execute("""
+            SELECT * FROM companies
+            WHERE name LIKE ?
+            ORDER BY name
+        """, (search_term,))
+
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
@@ -2256,13 +2306,21 @@ def generate_quote_number():
     conn = get_connection()
     cursor = conn.cursor()
     year = datetime.now().year
+    pattern = f"Q-{year}-%"
 
     # Get the highest quote number for this year
-    cursor.execute("""
-        SELECT quote_number FROM quotes
-        WHERE quote_number LIKE ?
-        ORDER BY quote_number DESC LIMIT 1
-    """, (f"Q-{year}-%",))
+    if USE_POSTGRES:
+        cursor.execute("""
+            SELECT quote_number FROM quotes
+            WHERE quote_number LIKE %s
+            ORDER BY quote_number DESC LIMIT 1
+        """, (pattern,))
+    else:
+        cursor.execute("""
+            SELECT quote_number FROM quotes
+            WHERE quote_number LIKE ?
+            ORDER BY quote_number DESC LIMIT 1
+        """, (pattern,))
 
     row = cursor.fetchone()
     conn.close()

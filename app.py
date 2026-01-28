@@ -1388,12 +1388,12 @@ def quote_add():
         if result['success']:
             return redirect(url_for('quote_edit', quote_id=result['id']))
         return render_template('quote_form.html', error=result['error'],
-                             salespeople=get_salespeople(), contacts=get_all_contacts(),
+                             salespeople=get_salespeople(), contacts=get_all_contacts(limit=5000),
                              companies=get_all_companies(), products=get_all_products())
 
     # GET - show empty form
     salespeople = get_salespeople()
-    contacts = get_all_contacts()
+    contacts = get_all_contacts(limit=5000)  # Load more contacts for search
     companies = get_all_companies()
     products = get_all_products()
 
