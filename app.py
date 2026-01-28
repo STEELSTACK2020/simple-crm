@@ -2229,6 +2229,9 @@ def forms_page():
     """Page showing the embeddable form code."""
     # Get the server URL for the form endpoint
     server_url = request.url_root.rstrip('/')
+    # Force HTTPS on Railway/production
+    if 'railway.app' in server_url or os.environ.get('RAILWAY_PUBLIC_DOMAIN'):
+        server_url = server_url.replace('http://', 'https://')
     return render_template('forms.html', server_url=server_url)
 
 
