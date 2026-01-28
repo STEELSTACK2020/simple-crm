@@ -46,7 +46,7 @@
                    class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
         </div>
         {% if current_salesperson or current_stage or search_query or date_from or date_to %}
-        <a href="/deals" class="text-sm text-slate-600 hover:text-slate-800 underline">Clear filters</a>
+        <button onclick="clearAllFilters()" class="text-sm text-red-600 hover:text-red-800 underline font-medium">Clear All</button>
         {% endif %}
     </div>
     {% if current_salesperson or current_stage or search_query or date_from or date_to %}
@@ -63,32 +63,47 @@
 </div>
 
 <script>
-// Save/Load filter preferences for deals page
-(function() {
-    const STORAGE_KEY = 'dealsFilterPrefs';
-    const hasFilters = window.location.search.length > 0;
+const STORAGE_KEY = 'dealsFilterPrefs';
 
-    // If page has filters, save them
+// Check if we should restore saved filters (only if no filters and not explicitly cleared)
+(function() {
+    const hasFilters = window.location.search.length > 0;
+    const wasCleared = sessionStorage.getItem('dealsFilterCleared');
+
+    // If page has filters, save them and clear the "was cleared" flag
     if (hasFilters) {
         localStorage.setItem(STORAGE_KEY, window.location.search);
+        sessionStorage.removeItem('dealsFilterCleared');
     }
 
-    // If no filters in URL, check for saved preference and redirect
-    if (!hasFilters) {
+    // If no filters and wasn't just cleared, restore saved preference
+    if (!hasFilters && !wasCleared) {
         const savedFilter = localStorage.getItem(STORAGE_KEY);
         if (savedFilter && savedFilter.length > 0) {
             window.location.href = '/deals' + savedFilter;
         }
     }
 
-    // Intercept "Clear filters" link to clear saved preference
-    const clearLink = document.querySelector('a[href="/deals"]');
-    if (clearLink) {
-        clearLink.addEventListener('click', function(e) {
-            localStorage.removeItem(STORAGE_KEY);
-        });
+    // Clear the "was cleared" flag after checking (one-time use)
+    if (wasCleared) {
+        sessionStorage.removeItem('dealsFilterCleared');
     }
 })();
+
+function clearAllFilters() {
+    // Clear saved preferences
+    localStorage.removeItem(STORAGE_KEY);
+    // Set flag so we don't auto-restore on next page load
+    sessionStorage.setItem('dealsFilterCleared', 'true');
+    // Clear all inputs
+    document.getElementById('search-input').value = '';
+    document.getElementById('salesperson-filter').value = '';
+    document.getElementById('stage-filter').value = '';
+    document.getElementById('date-from').value = '';
+    document.getElementById('date-to').value = '';
+    // Navigate to clean URL
+    window.location.href = '/deals';
+}
 
 function applyFilters() {
     const search = document.getElementById('search-input').value.trim();
