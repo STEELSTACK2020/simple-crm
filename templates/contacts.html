@@ -37,19 +37,15 @@
                        class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm">
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
-                <p class="text-sm font-medium text-gray-700 mb-2">Supported CSV columns:</p>
-                <div class="text-xs space-y-1 mt-2">
-                    <div><span class="font-medium">First Name</span> → first_name</div>
-                    <div><span class="font-medium">Last Name</span> → last_name</div>
-                    <div><span class="font-medium">Email</span> or <span class="font-medium">Address</span> → email <span class="text-red-500">*required</span></div>
-                    <div><span class="font-medium">Phone</span> → phone</div>
-                    <div><span class="font-medium">Message</span> → Customer Message</div>
-                    <div><span class="font-medium">Notes</span> → Sales Notes</div>
-                    <div><span class="font-medium">Source</span> → utm_source</div>
-                    <div><span class="font-medium">Medium</span> → utm_medium</div>
-                    <div><span class="font-medium">Owner</span> → Assigned Salesperson (matches by name)</div>
+                <p class="text-sm font-medium text-gray-700 mb-2">CSV Headers (copy this exactly):</p>
+                <code class="text-xs bg-white px-3 py-2 rounded border block font-mono select-all">first_name,last_name,email,phone,notes,sales_notes,utm_source,utm_medium,created_at,Owner</code>
+                <div class="text-xs mt-3 space-y-1 text-gray-600">
+                    <div><strong>email</strong> = required</div>
+                    <div><strong>notes</strong> = Customer Message</div>
+                    <div><strong>sales_notes</strong> = Sales Notes</div>
+                    <div><strong>Owner</strong> = Salesperson (must match name exactly)</div>
                 </div>
-                <p class="text-xs text-gray-500 mt-3">Duplicates (same email) will be updated with new sales notes/salesperson if provided.</p>
+                <p class="text-xs text-gray-500 mt-3">Duplicates (same email) will be updated with new data.</p>
             </div>
             <div class="flex justify-end gap-3 pt-4">
                 <button type="button" onclick="closeImportModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">

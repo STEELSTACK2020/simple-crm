@@ -445,18 +445,18 @@ def import_contacts():
                 row.get('Address', row.get('address', ''))))))).strip()
             # Phone
             phone = row.get('phone', row.get('Phone', row.get('PHONE', ''))).strip()
-            # Message -> Customer Message (notes field)
-            message = row.get('Message', row.get('message', '')).strip()
-            # Notes -> Sales Notes (sales_notes field)
-            sales_notes = row.get('Notes', row.get('notes', '')).strip()
+            # notes = Customer Message
+            customer_message = row.get('notes', row.get('Message', row.get('message', ''))).strip()
+            # sales_notes = Sales Notes
+            sales_notes = row.get('sales_notes', row.get('Notes', '')).strip()
             # Source
             utm_source = row.get('utm_source', row.get('source', row.get('Source', ''))).strip()
             # Medium
             utm_medium = row.get('utm_medium', row.get('medium', row.get('Medium', ''))).strip()
             # Owner -> Salesperson
             owner = row.get('Owner', row.get('owner', row.get('Salesperson', row.get('salesperson', '')))).strip()
-            # Time -> created_at
-            created_time = row.get('Time', row.get('time', row.get('Created', row.get('created_at', '')))).strip()
+            # created_at
+            created_time = row.get('created_at', row.get('Time', row.get('time', ''))).strip()
 
             # Look up salesperson_id by name
             salesperson_id = None
@@ -477,8 +477,8 @@ def import_contacts():
                     update_data['sales_notes'] = sales_notes
                 if salesperson_id:
                     update_data['salesperson_id'] = salesperson_id
-                if message and not existing.get('notes'):
-                    update_data['notes'] = message
+                if customer_message and not existing.get('notes'):
+                    update_data['notes'] = customer_message
                 if update_data:
                     update_contact(existing['id'], **update_data)
                     updated += 1
@@ -492,7 +492,7 @@ def import_contacts():
                 last_name=last_name or '',
                 email=email,
                 phone=phone or None,
-                notes=message or None,  # Message -> Customer Message
+                notes=customer_message or None,  # notes -> Customer Message
                 sales_notes=sales_notes or None,  # Notes -> Sales Notes
                 utm_source=utm_source or None,
                 utm_medium=utm_medium or None
