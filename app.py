@@ -2100,7 +2100,7 @@ def submit_fix_request():
     message = request.form.get('message', '').strip()
 
     if not name or not message:
-        return redirect(url_for('quotes') + '?error=Name+and+message+are+required')
+        return redirect(url_for('quotes_list') + '?error=Name+and+message+are+required')
 
     # Handle file upload
     attachment_filename = None
@@ -2121,9 +2121,9 @@ def submit_fix_request():
     result = add_fix_request(name, message, attachment_filename)
 
     if result['success']:
-        return redirect(url_for('quotes') + '?success=Issue+reported+successfully!+Thank+you+for+your+feedback.')
+        return redirect(url_for('quotes_list') + '?success=Issue+reported+successfully!+Thank+you+for+your+feedback.')
     else:
-        return redirect(url_for('quotes') + '?error=Failed+to+submit+issue')
+        return redirect(url_for('quotes_list') + '?error=Failed+to+submit+issue')
 
 
 @app.route('/fixes')
