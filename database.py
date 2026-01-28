@@ -983,106 +983,122 @@ def get_year_comparison():
 
 def get_leads_by_month_medium(year=None):
     """Get leads (contacts) broken down by month and medium for bar chart."""
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # If no year specified, use current year
-    if not year:
-        year = str(datetime.now().year)
-    else:
-        year = str(year)
-
-    # All 12 months for the year
-    all_months = [f"{year}-{str(m).zfill(2)}" for m in range(1, 13)]
-    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-    # Get all leads grouped by month and medium for the specified year
-    if USE_POSTGRES:
-        cursor.execute("""
-            SELECT
-                TO_CHAR(created_at::timestamp, 'YYYY-MM') as month,
-                COALESCE(utm_medium, 'Unknown') as medium,
-                COUNT(*) as lead_count
-            FROM contacts
-            WHERE EXTRACT(YEAR FROM created_at::timestamp) = %s
-            GROUP BY TO_CHAR(created_at::timestamp, 'YYYY-MM'), COALESCE(utm_medium, 'Unknown')
-            ORDER BY month, lead_count DESC
-        """, (int(year),))
-    else:
-        cursor.execute("""
-            SELECT
-                substr(created_at, 1, 7) as month,
-                COALESCE(utm_medium, 'Unknown') as medium,
-                COUNT(*) as lead_count
-            FROM contacts
-            WHERE substr(created_at, 1, 4) = ?
-            GROUP BY substr(created_at, 1, 7), utm_medium
-            ORDER BY month, lead_count DESC
-        """, (year,))
-    raw_data = [dict(row) for row in cursor.fetchall()]
-
-    # Get all unique mediums across all data
-    cursor.execute("""
-        SELECT DISTINCT COALESCE(utm_medium, 'Unknown') as medium
-        FROM contacts
-    """)
-    mediums = [row['medium'] for row in cursor.fetchall()]
-    if not mediums:
-        mediums = ['Unknown']
-
-    # Get available years for the dropdown
-    if USE_POSTGRES:
-        cursor.execute("""
-            SELECT DISTINCT EXTRACT(YEAR FROM created_at::timestamp) as year
-            FROM contacts
-            WHERE created_at IS NOT NULL
-            ORDER BY year DESC
-        """)
-        available_years = [str(int(row[0])) for row in cursor.fetchall() if row[0]]
-    else:
-        cursor.execute("""
-            SELECT DISTINCT substr(created_at, 1, 4) as year
-            FROM contacts
-            WHERE created_at IS NOT NULL
-            ORDER BY year DESC
-        """)
-        available_years = [row[0] for row in cursor.fetchall() if row[0]]
-
-    # Ensure current year is in list
-    if year not in available_years:
-        available_years.insert(0, year)
-
-    # Build structured data for chart
-    # Format: { medium: [count_jan, count_feb, ...] }
-    chart_data = {}
-    for medium in mediums:
-        chart_data[medium] = []
-        for month in all_months:
-            count = 0
-            for row in raw_data:
-                if row['month'] == month and row['medium'] == medium:
-                    count = row['lead_count']
-                    break
-            chart_data[medium].append(count)
-
-    # Calculate totals per month
-    monthly_totals = []
-    for i, month in enumerate(all_months):
-        total = sum(chart_data[medium][i] for medium in mediums)
-        monthly_totals.append(total)
-
-    conn.close()
-    return {
-        'year': year,
-        'months': all_months,
-        'month_names': month_names,
-        'mediums': mediums,
-        'data': chart_data,
-        'totals': monthly_totals,
-        'available_years': available_years,
-        'raw': raw_data
+    # Default return structure in case of error
+    default_return = {
+        'year': str(datetime.now().year),
+        'months': [f"{datetime.now().year}-{str(m).zfill(2)}" for m in range(1, 13)],
+        'month_names': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        'mediums': ['Unknown'],
+        'data': {'Unknown': [0] * 12},
+        'totals': [0] * 12,
+        'available_years': [str(datetime.now().year)],
+        'raw': []
     }
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # If no year specified, use current year
+        if not year:
+            year = str(datetime.now().year)
+        else:
+            year = str(year)
+
+        # All 12 months for the year
+        all_months = [f"{year}-{str(m).zfill(2)}" for m in range(1, 13)]
+        month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+        # Get all leads grouped by month and medium for the specified year
+        if USE_POSTGRES:
+            cursor.execute("""
+                SELECT
+                    TO_CHAR(created_at::timestamp, 'YYYY-MM') as month,
+                    COALESCE(utm_medium, 'Unknown') as medium,
+                    COUNT(*) as lead_count
+                FROM contacts
+                WHERE EXTRACT(YEAR FROM created_at::timestamp) = %s
+                GROUP BY TO_CHAR(created_at::timestamp, 'YYYY-MM'), COALESCE(utm_medium, 'Unknown')
+                ORDER BY month, lead_count DESC
+            """, (int(year),))
+        else:
+            cursor.execute("""
+                SELECT
+                    substr(created_at, 1, 7) as month,
+                    COALESCE(utm_medium, 'Unknown') as medium,
+                    COUNT(*) as lead_count
+                FROM contacts
+                WHERE substr(created_at, 1, 4) = ?
+                GROUP BY substr(created_at, 1, 7), utm_medium
+                ORDER BY month, lead_count DESC
+            """, (year,))
+        raw_data = [dict(row) for row in cursor.fetchall()]
+
+        # Get all unique mediums across all data
+        cursor.execute("""
+            SELECT DISTINCT COALESCE(utm_medium, 'Unknown') as medium
+            FROM contacts
+        """)
+        mediums = [row['medium'] for row in cursor.fetchall()]
+        if not mediums:
+            mediums = ['Unknown']
+
+        # Get available years for the dropdown
+        if USE_POSTGRES:
+            cursor.execute("""
+                SELECT DISTINCT EXTRACT(YEAR FROM created_at::timestamp) as year
+                FROM contacts
+                WHERE created_at IS NOT NULL
+                ORDER BY year DESC
+            """)
+            available_years = [str(int(row[0])) for row in cursor.fetchall() if row[0]]
+        else:
+            cursor.execute("""
+                SELECT DISTINCT substr(created_at, 1, 4) as year
+                FROM contacts
+                WHERE created_at IS NOT NULL
+                ORDER BY year DESC
+            """)
+            available_years = [row[0] for row in cursor.fetchall() if row[0]]
+
+        # Ensure current year is in list
+        if year not in available_years:
+            available_years.insert(0, year)
+
+        # Build structured data for chart
+        # Format: { medium: [count_jan, count_feb, ...] }
+        chart_data = {}
+        for medium in mediums:
+            chart_data[medium] = []
+            for month in all_months:
+                count = 0
+                for row in raw_data:
+                    if row['month'] == month and row['medium'] == medium:
+                        count = row['lead_count']
+                        break
+                chart_data[medium].append(count)
+
+        # Calculate totals per month
+        monthly_totals = []
+        for i, month in enumerate(all_months):
+            total = sum(chart_data[medium][i] for medium in mediums)
+            monthly_totals.append(total)
+
+        conn.close()
+        return {
+            'year': year,
+            'months': all_months,
+            'month_names': month_names,
+            'mediums': mediums,
+            'data': chart_data,
+            'totals': monthly_totals,
+            'available_years': available_years,
+            'raw': raw_data
+        }
+    except Exception as e:
+        print(f"Error in get_leads_by_month_medium: {e}")
+        return default_return
 
 
 # ============== Deal Functions ==============
