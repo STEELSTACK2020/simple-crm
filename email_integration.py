@@ -28,6 +28,32 @@ GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 OUTLOOK_SCOPES = ['https://graph.microsoft.com/Mail.Read']
 
 
+def get_base_url():
+    """Get the base URL for OAuth redirects (handles localhost vs production)."""
+    # Check for Railway or other production environment
+    railway_url = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+    if railway_url:
+        return f"https://{railway_url}"
+
+    # Check for explicit BASE_URL environment variable
+    base_url = os.environ.get('BASE_URL')
+    if base_url:
+        return base_url.rstrip('/')
+
+    # Default to localhost for development
+    return 'http://localhost:5000'
+
+
+def get_gmail_redirect_uri():
+    """Get Gmail OAuth redirect URI."""
+    return f"{get_base_url()}/settings/email/gmail/callback"
+
+
+def get_outlook_redirect_uri():
+    """Get Outlook OAuth redirect URI."""
+    return f"{get_base_url()}/settings/email/outlook/callback"
+
+
 # ============== Gmail Integration ==============
 
 def is_gmail_configured():
@@ -59,7 +85,7 @@ def get_gmail_auth_url():
         flow = Flow.from_client_secrets_file(
             str(GMAIL_CREDENTIALS_PATH),
             scopes=GMAIL_SCOPES,
-            redirect_uri='http://localhost:5000/settings/email/gmail/callback'
+            redirect_uri=get_gmail_redirect_uri()
         )
 
         auth_url, _ = flow.authorization_url(
@@ -81,7 +107,7 @@ def gmail_oauth_callback(user_id, authorization_response):
         flow = Flow.from_client_secrets_file(
             str(GMAIL_CREDENTIALS_PATH),
             scopes=GMAIL_SCOPES,
-            redirect_uri='http://localhost:5000/settings/email/gmail/callback'
+            redirect_uri=get_gmail_redirect_uri()
         )
 
         flow.fetch_token(authorization_response=authorization_response)
@@ -335,7 +361,7 @@ def get_outlook_auth_url():
 
     client_id = config['client_id']
     tenant_id = config.get('tenant_id', 'common')
-    redirect_uri = 'http://localhost:5000/settings/email/outlook/callback'
+    redirect_uri = get_outlook_redirect_uri()
     scope = 'offline_access Mail.Read'
 
     auth_url = (
@@ -360,7 +386,7 @@ def outlook_oauth_callback(user_id, authorization_code):
     client_id = config['client_id']
     client_secret = config['client_secret']
     tenant_id = config.get('tenant_id', 'common')
-    redirect_uri = 'http://localhost:5000/settings/email/outlook/callback'
+    redirect_uri = get_outlook_redirect_uri()
 
     token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
 
