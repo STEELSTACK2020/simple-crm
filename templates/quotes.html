@@ -13,6 +13,25 @@
     </a>
 </div>
 
+<script>
+// Check for success/error messages in URL
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('success')) {
+    const msg = document.createElement('div');
+    msg.className = 'mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded';
+    msg.textContent = decodeURIComponent(urlParams.get('success').replace(/\+/g, ' '));
+    document.querySelector('.mb-8').after(msg);
+    setTimeout(() => msg.remove(), 5000);
+}
+if (urlParams.get('error')) {
+    const msg = document.createElement('div');
+    msg.className = 'mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded';
+    msg.textContent = decodeURIComponent(urlParams.get('error').replace(/\+/g, ' '));
+    document.querySelector('.mb-8').after(msg);
+    setTimeout(() => msg.remove(), 5000);
+}
+</script>
+
 <!-- Search and Filters -->
 <div class="mb-6 flex flex-wrap items-center gap-4">
     <!-- Search -->

@@ -54,6 +54,52 @@
                             <a href="/traffic/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-b-md">Traffic Settings</a>
                         </div>
                     </div>
+                    <!-- Fixes Dropdown -->
+                    <div class="relative group">
+                        <button class="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white px-3 py-2 rounded-md text-sm font-medium shadow border border-yellow-600 flex items-center gap-2">
+                            Fixes
+                            {% if pending_fixes_count and pending_fixes_count > 0 %}
+                            <span class="bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{{ pending_fixes_count }}</span>
+                            {% endif %}
+                        </button>
+                        <div class="absolute right-0 mt-1 w-80 bg-white rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-yellow-200">
+                            <div class="px-4 py-3 border-b bg-gradient-to-r from-yellow-50 to-amber-50 rounded-t-lg flex justify-between items-center">
+                                <span class="font-semibold text-gray-800">Reported Issues</span>
+                                <button onclick="event.stopPropagation(); openFixesModal();" class="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded">+ New</button>
+                            </div>
+                            <div class="max-h-64 overflow-y-auto">
+                                {% if pending_fixes %}
+                                    {% for fix in pending_fixes[:10] %}
+                                    <div class="px-4 py-3 border-b hover:bg-gray-50 flex items-start gap-3">
+                                        <form action="/fixes/{{ fix.id }}/done" method="POST" class="flex-shrink-0 mt-1">
+                                            <button type="submit" class="w-5 h-5 border-2 border-gray-300 rounded hover:border-green-500 hover:bg-green-50 flex items-center justify-center" title="Mark as done">
+                                                <svg class="w-3 h-3 text-transparent hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-gray-900">{{ fix.name }}</p>
+                                            <p class="text-xs text-gray-500 truncate">{{ fix.message[:50] }}{% if fix.message|length > 50 %}...{% endif %}</p>
+                                            {% if fix.attachment_filename %}
+                                            <a href="/static/uploads/fixes/{{ fix.attachment_filename }}" target="_blank" class="text-xs text-blue-600 hover:underline">View attachment</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="px-4 py-6 text-center text-gray-500 text-sm">
+                                        No pending issues
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% if pending_fixes and pending_fixes|length > 0 %}
+                            <div class="px-4 py-2 border-t bg-gray-50 rounded-b-lg">
+                                <a href="/fixes" class="text-xs text-slate-600 hover:text-slate-800">View all issues →</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
                     <a href="/quotes/add" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-md text-sm font-medium">+ Add Quote</a>
                     {% if current_user %}
                     <div class="relative group ml-2">
@@ -87,6 +133,66 @@
             Simple CRM - Your Contact Management Hub
         </div>
     </footer>
+
+    <!-- Fixes Modal (Global) -->
+    <div id="fixes-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 border-t-4 border-yellow-500">
+            <div class="px-6 py-4 border-b bg-gradient-to-r from-yellow-50 to-amber-50">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-900">Report an Issue</h2>
+                    <button onclick="closeFixesModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">Let us know about bugs or feature requests</p>
+            </div>
+            <form id="fixes-form" action="/fixes/submit" method="POST" enctype="multipart/form-data" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Your Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                           placeholder="Enter your name">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Message <span class="text-red-500">*</span></label>
+                    <textarea name="message" required rows="4"
+                              class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                              placeholder="Describe the issue or feature request..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Attachment (optional)</label>
+                    <input type="file" name="attachment"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100">
+                    <p class="text-xs text-gray-500 mt-1">Screenshots or files to help explain the issue</p>
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closeFixesModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white rounded-lg font-medium shadow">
+                        Submit Issue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function openFixesModal() {
+        document.getElementById('fixes-modal').classList.remove('hidden');
+        document.getElementById('fixes-modal').classList.add('flex');
+    }
+
+    function closeFixesModal() {
+        document.getElementById('fixes-modal').classList.add('hidden');
+        document.getElementById('fixes-modal').classList.remove('flex');
+        document.getElementById('fixes-form').reset();
+    }
+
+    document.getElementById('fixes-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeFixesModal();
+        }
+    });
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>

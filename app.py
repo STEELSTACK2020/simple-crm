@@ -34,7 +34,9 @@ from database import (
     add_user, get_user, get_user_by_username, authenticate_user, update_user,
     delete_user, get_all_users, get_user_count,
     # Quick notes
-    get_quick_notes, save_quick_notes
+    get_quick_notes, save_quick_notes,
+    # Fix requests
+    add_fix_request, get_all_fix_requests, init_fix_requests_table, update_fix_request_status
 )
 from pdf_generator import generate_quote_pdf
 from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RATE_PER_MILE
@@ -73,6 +75,7 @@ def format_date_filter(value, format='%Y-%m-%d'):
 
 # Initialize database on startup
 init_database()
+init_fix_requests_table()  # Create fix_requests table if not exists
 
 
 # ============== Authentication ==============
@@ -110,6 +113,17 @@ def get_current_user():
 def inject_user():
     """Make current user available in all templates."""
     return dict(current_user=get_current_user())
+
+
+@app.context_processor
+def inject_pending_fixes():
+    """Make pending fixes available in all templates for the navbar."""
+    try:
+        fixes = get_all_fix_requests()
+        pending = [f for f in fixes if f.get('status') == 'pending']
+        return dict(pending_fixes=pending, pending_fixes_count=len(pending))
+    except:
+        return dict(pending_fixes=[], pending_fixes_count=0)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -2071,6 +2085,62 @@ def forms_page():
     # Get the server URL for the form endpoint
     server_url = request.url_root.rstrip('/')
     return render_template('forms.html', server_url=server_url)
+
+
+# ============== Fix Requests ==============
+
+@app.route('/fixes/submit', methods=['POST'])
+@login_required
+def submit_fix_request():
+    """Handle fix request/bug report submission."""
+    import os
+    from werkzeug.utils import secure_filename
+
+    name = request.form.get('name', '').strip()
+    message = request.form.get('message', '').strip()
+
+    if not name or not message:
+        return redirect(url_for('quotes') + '?error=Name+and+message+are+required')
+
+    # Handle file upload
+    attachment_filename = None
+    if 'attachment' in request.files:
+        file = request.files['attachment']
+        if file and file.filename:
+            # Create uploads directory if it doesn't exist
+            upload_dir = os.path.join(os.path.dirname(__file__), 'static', 'uploads', 'fixes')
+            os.makedirs(upload_dir, exist_ok=True)
+
+            # Secure the filename and save
+            filename = secure_filename(file.filename)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            attachment_filename = f"{timestamp}_{filename}"
+            file.save(os.path.join(upload_dir, attachment_filename))
+
+    # Save to database
+    result = add_fix_request(name, message, attachment_filename)
+
+    if result['success']:
+        return redirect(url_for('quotes') + '?success=Issue+reported+successfully!+Thank+you+for+your+feedback.')
+    else:
+        return redirect(url_for('quotes') + '?error=Failed+to+submit+issue')
+
+
+@app.route('/fixes')
+@login_required
+def view_fix_requests():
+    """View all fix requests."""
+    fixes = get_all_fix_requests()
+    return render_template('fix_requests.html', fixes=fixes)
+
+
+@app.route('/fixes/<int:fix_id>/done', methods=['POST'])
+@login_required
+def mark_fix_done(fix_id):
+    """Mark a fix request as done."""
+    update_fix_request_status(fix_id, 'done')
+    # Redirect back to the page they came from
+    return redirect(request.referrer or url_for('dashboard'))
 
 
 if __name__ == '__main__':

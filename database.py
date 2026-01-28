@@ -2964,5 +2964,96 @@ def save_quick_notes(content, user_id=1):
     return {"success": True}
 
 
+# ============== Fix Requests ==============
+
+def add_fix_request(name, message, attachment_filename=None):
+    """Add a new fix request/bug report."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if USE_POSTGRES:
+        cursor.execute("""
+            INSERT INTO fix_requests (name, message, attachment_filename, status, created_at)
+            VALUES (%s, %s, %s, 'pending', CURRENT_TIMESTAMP)
+            RETURNING id
+        """, (name, message, attachment_filename))
+        result = cursor.fetchone()
+        fix_id = result['id'] if result else None
+    else:
+        cursor.execute("""
+            INSERT INTO fix_requests (name, message, attachment_filename, status, created_at)
+            VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)
+        """, (name, message, attachment_filename))
+        fix_id = cursor.lastrowid
+
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": fix_id}
+
+
+def get_all_fix_requests():
+    """Get all fix requests."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM fix_requests
+        ORDER BY created_at DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def update_fix_request_status(fix_id, status):
+    """Update the status of a fix request."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if USE_POSTGRES:
+        cursor.execute("""
+            UPDATE fix_requests SET status = %s WHERE id = %s
+        """, (status, fix_id))
+    else:
+        cursor.execute("""
+            UPDATE fix_requests SET status = ? WHERE id = ?
+        """, (status, fix_id))
+
+    conn.commit()
+    conn.close()
+    return {"success": True}
+
+
+def init_fix_requests_table():
+    """Create the fix_requests table if it doesn't exist."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if USE_POSTGRES:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fix_requests (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                message TEXT NOT NULL,
+                attachment_filename TEXT,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+    else:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fix_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                message TEXT NOT NULL,
+                attachment_filename TEXT,
+                status TEXT DEFAULT 'pending',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+    conn.commit()
+    conn.close()
+
+
 if __name__ == "__main__":
     init_database()

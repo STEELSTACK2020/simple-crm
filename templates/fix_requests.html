@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Reported Issues - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Reported Issues</h1>
+    <p class="mt-2 text-gray-600">View and manage all reported bugs and feature requests</p>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">From</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attachment</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for fix in fixes %}
+            <tr class="{{ 'bg-green-50' if fix.status == 'done' else '' }}">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if fix.status == 'pending' %}
+                    <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Pending</span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Done</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ fix.name }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500 max-w-md">{{ fix.message }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    {% if fix.attachment_filename %}
+                    <a href="/static/uploads/fixes/{{ fix.attachment_filename }}" target="_blank" class="text-blue-600 hover:underline">View</a>
+                    {% else %}
+                    <span class="text-gray-400">-</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ fix.created_at[:10] if fix.created_at else '-' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    {% if fix.status == 'pending' %}
+                    <form action="/fixes/{{ fix.id }}/done" method="POST" class="inline">
+                        <button type="submit" class="text-green-600 hover:text-green-800 font-medium">Mark Done</button>
+                    </form>
+                    {% else %}
+                    <span class="text-gray-400">Completed</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="px-6 py-8 text-center text-gray-500">No issues reported yet</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
