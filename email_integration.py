@@ -282,7 +282,20 @@ def save_outlook_config(client_id, client_secret, tenant_id='common'):
 
 
 def get_outlook_config():
-    """Get Outlook OAuth configuration."""
+    """Get Outlook OAuth configuration from env vars or file."""
+    # First check environment variables (for Railway/production)
+    client_id = os.environ.get('OUTLOOK_CLIENT_ID')
+    client_secret = os.environ.get('OUTLOOK_CLIENT_SECRET')
+    tenant_id = os.environ.get('OUTLOOK_TENANT_ID', 'common')
+
+    if client_id and client_secret:
+        return {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'tenant_id': tenant_id
+        }
+
+    # Fall back to config file
     if not OUTLOOK_CONFIG_PATH.exists():
         return None
     with open(OUTLOOK_CONFIG_PATH, 'r') as f:
@@ -291,6 +304,9 @@ def get_outlook_config():
 
 def is_outlook_configured():
     """Check if Outlook OAuth is configured (app-level)."""
+    # Check env vars first
+    if os.environ.get('OUTLOOK_CLIENT_ID') and os.environ.get('OUTLOOK_CLIENT_SECRET'):
+        return True
     return OUTLOOK_CONFIG_PATH.exists()
 
 
