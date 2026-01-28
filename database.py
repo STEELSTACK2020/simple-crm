@@ -574,7 +574,7 @@ def update_contact(contact_id, **kwargs):
         'first_name', 'last_name', 'email', 'phone',
         'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
         'deal_value', 'deal_closed_date', 'notes', 'last_activity_date', 'company_id',
-        'original_source_details', 'sales_notes', 'salesperson_id'
+        'original_source_details', 'sales_notes', 'salesperson_id', 'created_at'
     ]
 
     updates = []

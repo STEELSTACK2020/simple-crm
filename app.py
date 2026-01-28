@@ -422,17 +422,46 @@ def import_contacts():
 
         imported = 0
         skipped = 0
-        errors = []
+        updated = 0
+
+        # Build salesperson lookup dict (name -> id)
+        salespeople_list = get_salespeople()
+        salesperson_lookup = {}
+        for sp in salespeople_list:
+            salesperson_lookup[sp['name'].lower().strip()] = sp['id']
+            # Also add first name only for matching
+            if sp.get('first_name'):
+                salesperson_lookup[sp['first_name'].lower().strip()] = sp['id']
 
         for row in reader:
             # Get values with flexible column names
+            # First Name
             first_name = row.get('first_name', row.get('First Name', row.get('firstname', ''))).strip()
+            # Last Name
             last_name = row.get('last_name', row.get('Last Name', row.get('lastname', ''))).strip()
-            email = row.get('email', row.get('Email', row.get('EMAIL', ''))).strip()
+            # Email - check multiple variations including "Email Address"
+            email = row.get('email', row.get('Email', row.get('EMAIL',
+                row.get('Email Address', row.get('email address',
+                row.get('Address', row.get('address', ''))))))).strip()
+            # Phone
             phone = row.get('phone', row.get('Phone', row.get('PHONE', ''))).strip()
-            notes = row.get('notes', row.get('Notes', row.get('NOTES', ''))).strip()
+            # Message -> Customer Message (notes field)
+            message = row.get('Message', row.get('message', '')).strip()
+            # Notes -> Sales Notes (sales_notes field)
+            sales_notes = row.get('Notes', row.get('notes', '')).strip()
+            # Source
             utm_source = row.get('utm_source', row.get('source', row.get('Source', ''))).strip()
+            # Medium
             utm_medium = row.get('utm_medium', row.get('medium', row.get('Medium', ''))).strip()
+            # Owner -> Salesperson
+            owner = row.get('Owner', row.get('owner', row.get('Salesperson', row.get('salesperson', '')))).strip()
+            # Time -> created_at
+            created_time = row.get('Time', row.get('time', row.get('Created', row.get('created_at', '')))).strip()
+
+            # Look up salesperson_id by name
+            salesperson_id = None
+            if owner:
+                salesperson_id = salesperson_lookup.get(owner.lower().strip())
 
             # Skip if no email (required field)
             if not email:
@@ -442,28 +471,51 @@ def import_contacts():
             # Check if contact already exists
             existing = get_contact_by_email(email)
             if existing:
-                skipped += 1
+                # Update existing contact with new data (if fields are provided)
+                update_data = {}
+                if sales_notes:
+                    update_data['sales_notes'] = sales_notes
+                if salesperson_id:
+                    update_data['salesperson_id'] = salesperson_id
+                if message and not existing.get('notes'):
+                    update_data['notes'] = message
+                if update_data:
+                    update_contact(existing['id'], **update_data)
+                    updated += 1
+                else:
+                    skipped += 1
                 continue
 
-            # Add contact
+            # Add new contact
             result = add_contact(
                 first_name=first_name or 'Unknown',
                 last_name=last_name or '',
                 email=email,
                 phone=phone or None,
-                notes=notes or None,
+                notes=message or None,  # Message -> Customer Message
+                sales_notes=sales_notes or None,  # Notes -> Sales Notes
                 utm_source=utm_source or None,
                 utm_medium=utm_medium or None
             )
 
             if result.get('success'):
+                # Update salesperson and created_at if we have them
+                update_data = {}
+                if salesperson_id:
+                    update_data['salesperson_id'] = salesperson_id
+                if created_time:
+                    update_data['created_at'] = created_time
+                if update_data:
+                    update_contact(result['id'], **update_data)
                 imported += 1
             else:
                 skipped += 1
 
         message = f"Imported+{imported}+contacts"
+        if updated > 0:
+            message += f",+updated+{updated}"
         if skipped > 0:
-            message += f"+({skipped}+skipped+-+duplicates+or+missing+email)"
+            message += f"+({skipped}+skipped)"
 
         return redirect(url_for('contacts_list') + f'?success={message}')
 
