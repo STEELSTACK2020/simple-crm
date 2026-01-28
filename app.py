@@ -588,9 +588,13 @@ def traffic_dashboard():
         traffic = get_demo_traffic_data()
         traffic_by_month = get_demo_traffic_by_month()
 
+    # Get leads by month and medium from CRM data
+    leads_by_month = get_leads_by_month_medium()
+
     return render_template('traffic.html',
                            traffic=traffic,
                            traffic_by_month=traffic_by_month,
+                           leads_by_month=leads_by_month,
                            phone_clicks=phone_clicks,
                            ga_connected=ga_connected,
                            oauth_configured=oauth_configured,

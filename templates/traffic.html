@@ -218,6 +218,28 @@
     <div id="trafficChartLoading" class="hidden text-center py-4 text-gray-500">Loading...</div>
 </div>
 
+<!-- Leads by Month & Medium Bar Chart -->
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <div class="flex flex-wrap justify-between items-center mb-4">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900">Leads by Month & Medium</h3>
+            <p class="text-sm text-gray-500">Monthly lead breakdown by source medium (from CRM contacts)</p>
+        </div>
+        <div class="mt-2 sm:mt-0">
+            <select id="leadsYearSelect" onchange="loadLeadsForYear(this.value)"
+                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer">
+                {% for yr in leads_by_month.available_years %}
+                <option value="{{ yr }}" {{ 'selected' if yr|string == leads_by_month.year|string else '' }}>{{ yr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div style="height: 400px;">
+        <canvas id="leadsByMonthChart"></canvas>
+    </div>
+    <div id="leadsChartLoading" class="hidden text-center py-4 text-gray-500">Loading...</div>
+</div>
+
 <!-- Channel Performance Table -->
 <div class="bg-white rounded-lg shadow overflow-hidden mb-8">
     <div class="px-6 py-4 border-b">
@@ -558,5 +580,132 @@
 
     // Initialize chart
     createTrafficChart(currentTrafficData);
+
+    // ========== LEADS BY MONTH & MEDIUM CHART ==========
+    const leadsChartColors = [
+        'rgba(16, 185, 129, 0.8)',   // Green
+        'rgba(59, 130, 246, 0.8)',   // Blue
+        'rgba(245, 158, 11, 0.8)',   // Yellow
+        'rgba(239, 68, 68, 0.8)',    // Red
+        'rgba(139, 92, 246, 0.8)',   // Purple
+        'rgba(236, 72, 153, 0.8)',   // Pink
+        'rgba(20, 184, 166, 0.8)',   // Teal
+        'rgba(107, 114, 128, 0.8)',  // Gray
+    ];
+
+    let currentLeadsYear = '{{ leads_by_month.year }}';
+    let leadsChartInstance = null;
+    let currentLeadsData = {
+        months: [{% for m in leads_by_month.months %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        month_names: [{% for m in leads_by_month.month_names %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        mediums: [{% for m in leads_by_month.mediums %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        data: {{ leads_by_month.data | tojson }},
+        totals: {{ leads_by_month.totals | tojson }}
+    };
+
+    function createLeadsChart(data) {
+        const ctx = document.getElementById('leadsByMonthChart').getContext('2d');
+
+        if (leadsChartInstance) {
+            leadsChartInstance.destroy();
+        }
+
+        const datasets = data.mediums.map((medium, index) => ({
+            label: medium,
+            data: data.data[medium] || [],
+            backgroundColor: leadsChartColors[index % leadsChartColors.length],
+            borderColor: leadsChartColors[index % leadsChartColors.length].replace('0.8', '1'),
+            borderWidth: 1
+        }));
+
+        leadsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.month_names,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const monthIndex = context[0].dataIndex;
+                                return data.month_names[monthIndex] + ' ' + currentLeadsYear + ' (Total: ' + data.totals[monthIndex] + ' leads)';
+                            },
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw} leads`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        grace: '15%',
+                        title: {
+                            display: true,
+                            text: 'Leads'
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.labels.forEach((label, index) => {
+                        const total = data.totals[index];
+                        if (total > 0) {
+                            const meta = chart.getDatasetMeta(chart.data.datasets.length - 1);
+                            const bar = meta.data[index];
+                            if (bar) {
+                                const x = bar.x;
+                                const y = bar.y - 8;
+                                ctx.save();
+                                ctx.fillStyle = '#374151';
+                                ctx.font = 'bold 11px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(total, x, y);
+                                ctx.restore();
+                            }
+                        }
+                    });
+                }
+            }]
+        });
+    }
+
+    async function loadLeadsForYear(year) {
+        document.getElementById('leadsYearSelect').value = year;
+        document.getElementById('leadsChartLoading').classList.remove('hidden');
+
+        try {
+            const response = await fetch('/api/leads/by-year/' + year);
+            const data = await response.json();
+            currentLeadsYear = year;
+            currentLeadsData = data;
+            createLeadsChart(data);
+        } catch (error) {
+            console.error('Error loading leads data:', error);
+        }
+
+        document.getElementById('leadsChartLoading').classList.add('hidden');
+    }
+
+    // Initialize leads chart
+    createLeadsChart(currentLeadsData);
 </script>
 {% endblock %}
