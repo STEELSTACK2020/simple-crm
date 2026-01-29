@@ -372,6 +372,19 @@ def contact_delete(contact_id):
     return redirect(url_for('contacts_list'))
 
 
+@app.route('/contacts/<int:contact_id>/reset-activity', methods=['POST'])
+@login_required
+def contact_reset_activity(contact_id):
+    """Reset a contact's last_activity_date to None."""
+    from database import get_connection
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE contacts SET last_activity_date = NULL WHERE id = %s" if os.environ.get('DATABASE_URL') else "UPDATE contacts SET last_activity_date = NULL WHERE id = ?", (contact_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
 @app.route('/contacts/add', methods=['GET', 'POST'])
 @login_required
 def contact_add():

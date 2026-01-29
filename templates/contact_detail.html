@@ -371,7 +371,7 @@
         <!-- Timeline / Metadata -->
         <div class="mt-8 pt-6 border-t">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Timeline</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-blue-50 rounded-lg p-4">
                     <p class="text-xs font-medium text-blue-600 uppercase">Contact Created</p>
                     <p class="text-sm text-gray-900 mt-1">{{ contact.created_at|format_date if contact.created_at else 'N/A' }}</p>
@@ -380,11 +380,53 @@
                     <p class="text-xs font-medium text-slate-800 uppercase">Last Updated</p>
                     <p class="text-sm text-gray-900 mt-1">{{ contact.updated_at|format_date if contact.updated_at else 'N/A' }}</p>
                 </div>
+                <div class="bg-orange-50 rounded-lg p-4 relative">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs font-medium text-orange-600 uppercase">Last Activity</p>
+                        <div class="relative" id="activity-dropdown">
+                            <button onclick="document.getElementById('activity-menu').classList.toggle('hidden')" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><circle cx="4" cy="10" r="2"/><circle cx="10" cy="10" r="2"/><circle cx="16" cy="10" r="2"/></svg>
+                            </button>
+                            <div id="activity-menu" class="hidden absolute right-0 top-6 w-40 bg-white rounded-lg shadow-lg border z-10">
+                                <button onclick="resetActivity()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">
+                                    Reset to Never
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-900 mt-1" id="activity-display">
+                        {% if contact.last_activity_date %}
+                        {{ contact.last_activity_date|format_date }}
+                        {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 font-medium">Never</span>
+                        {% endif %}
+                    </p>
+                </div>
                 <div class="bg-green-50 rounded-lg p-4">
                     <p class="text-xs font-medium text-green-600 uppercase">Deal Closed</p>
                     <p class="text-sm text-gray-900 mt-1">{{ contact.deal_closed_date|format_date if contact.deal_closed_date else 'Not closed' }}</p>
                 </div>
             </div>
+
+            <script>
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!document.getElementById('activity-dropdown').contains(e.target)) {
+                    document.getElementById('activity-menu').classList.add('hidden');
+                }
+            });
+
+            function resetActivity() {
+                document.getElementById('activity-menu').classList.add('hidden');
+                fetch('/contacts/{{ contact.id }}/reset-activity', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.success) {
+                        document.getElementById('activity-display').innerHTML = '<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 font-medium">Never</span>';
+                    }
+                });
+            }
+            </script>
         </div>
     </div>
 </div>
