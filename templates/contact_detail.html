@@ -380,9 +380,9 @@
                     <p class="text-xs font-medium text-slate-800 uppercase">Last Updated</p>
                     <p class="text-sm text-gray-900 mt-1">{{ contact.updated_at|format_date if contact.updated_at else 'N/A' }}</p>
                 </div>
-                <div class="bg-orange-50 rounded-lg p-4 relative">
+                <div class="{{ 'bg-red-50' if not contact.last_activity_date else 'bg-gray-50' }} rounded-lg p-4 relative" id="activity-box">
                     <div class="flex items-center justify-between">
-                        <p class="text-xs font-medium text-orange-600 uppercase">Last Activity</p>
+                        <p class="text-xs font-medium {{ 'text-red-600' if not contact.last_activity_date else 'text-gray-600' }} uppercase" id="activity-label">Last Activity</p>
                         <div class="relative" id="activity-dropdown">
                             <button onclick="document.getElementById('activity-menu').classList.toggle('hidden')" class="text-gray-400 hover:text-gray-600 focus:outline-none">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><circle cx="4" cy="10" r="2"/><circle cx="10" cy="10" r="2"/><circle cx="16" cy="10" r="2"/></svg>
@@ -423,6 +423,12 @@
                 .then(function(res) {
                     if (res.success) {
                         document.getElementById('activity-display').innerHTML = '<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 font-medium">Never</span>';
+                        var box = document.getElementById('activity-box');
+                        box.classList.remove('bg-gray-50');
+                        box.classList.add('bg-red-50');
+                        var label = document.getElementById('activity-label');
+                        label.classList.remove('text-gray-600');
+                        label.classList.add('text-red-600');
                     }
                 });
             }
