@@ -436,7 +436,7 @@ function scrmSubmit(e){
         if (!val || el.type === 'hidden' || el.type === 'submit') return;
         if (val.includes('@') &amp;&amp; !fields.email) fields.email = val;
         else if (el.tagName === 'TEXTAREA') fields.message = val;
-        else if (/^\+?\d[\d\s\-().]{6,}$/.test(val)) fields.phone = val;
+        else if (/^[\+\(]?\d[\d\s\-().]{6,}$/.test(val)) fields.phone = val;
         else if (!fields.first_name) fields.first_name = val;
         else if (!fields.last_name) fields.last_name = val;
       });
