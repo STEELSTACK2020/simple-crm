@@ -659,14 +659,21 @@ def traffic_oauth_authorize():
     if not is_oauth_configured():
         return redirect(url_for('traffic_settings'))
 
-    flow = get_oauth_flow()
+    # Build redirect URI dynamically for local vs Railway
+    railway_url = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+    if railway_url:
+        redirect_uri = f"https://{railway_url}/traffic/oauth/callback"
+    else:
+        redirect_uri = 'http://localhost:5000/traffic/oauth/callback'
+
+    flow = get_oauth_flow(redirect_uri=redirect_uri)
     if not flow:
         return "OAuth not configured", 400
 
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
-        prompt='consent'
+        prompt='select_account consent'
     )
 
     # Store state in session for verification
@@ -685,12 +692,23 @@ def traffic_oauth_callback():
     if not is_oauth_configured():
         return redirect(url_for('traffic_settings'))
 
-    flow = get_oauth_flow()
+    # Build redirect URI dynamically for local vs Railway
+    railway_url = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+    if railway_url:
+        redirect_uri = f"https://{railway_url}/traffic/oauth/callback"
+    else:
+        redirect_uri = 'http://localhost:5000/traffic/oauth/callback'
+
+    flow = get_oauth_flow(redirect_uri=redirect_uri)
     if not flow:
         return "OAuth not configured", 400
 
-    # Get the authorization response
-    flow.fetch_token(authorization_response=request.url)
+    # Get the authorization response - fix HTTP to HTTPS for Railway
+    auth_response = request.url
+    if railway_url and auth_response.startswith('http://'):
+        auth_response = auth_response.replace('http://', 'https://', 1)
+
+    flow.fetch_token(authorization_response=auth_response)
 
     # Save the credentials
     credentials = flow.credentials
