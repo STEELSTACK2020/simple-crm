@@ -1,58 +1,77 @@
 {% extends "base.html" %}
 
-{% block title %}Embeddable Forms - Simple CRM{% endblock %}
+{% block title %}Form Integration - Simple CRM{% endblock %}
 
 {% block content %}
 <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900">Lead Capture Form</h1>
-    <p class="mt-2 text-gray-600">Embed this form on your website to capture leads directly into your CRM with UTM tracking</p>
+    <h1 class="text-3xl font-bold text-gray-900">Form Integration</h1>
+    <p class="mt-2 text-gray-600">Two ways to capture leads into your CRM with full UTM tracking</p>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <!-- Instructions & Code -->
-    <div class="space-y-6">
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">How to Use</h2>
-            <ol class="list-decimal list-inside space-y-2 text-gray-700">
-                <li>Copy the embed code below</li>
-                <li><strong>Edit the configuration</strong> at the top of the script:
-                    <ul class="list-disc list-inside ml-4 mt-1 text-sm">
-                        <li><code>SCRM_API_URL</code> - Your CRM's public URL</li>
-                        <li><code>SCRM_THANK_YOU_PAGE</code> - Redirect URL after submission</li>
-                    </ul>
-                </li>
-                <li>In Squarespace, add a <strong>Code Block</strong> to your page</li>
-                <li>Paste the code and save</li>
-            </ol>
+<!-- Tab Navigation -->
+<div class="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-8 max-w-lg">
+    <button onclick="showTab('option1')" id="tab-option1" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all bg-white shadow text-gray-900">
+        Option 1: Standalone Form
+    </button>
+    <button onclick="showTab('option2')" id="tab-option2" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all text-gray-500 hover:text-gray-700">
+        Option 2: Squarespace Piggyback
+    </button>
+</div>
 
-            <div class="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
-                <p class="text-sm text-red-800">
-                    <strong>Important:</strong> Your CRM must be hosted online (not localhost) for Squarespace to reach it.
-                    Deploy to <strong>PythonAnywhere</strong> (~$5/mo) or use <strong>ngrok</strong> for testing.
-                </p>
+<!-- ==================== OPTION 1: STANDALONE CRM FORM ==================== -->
+<div id="panel-option1" class="tab-panel">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Instructions & Code -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Standalone CRM Form</h2>
+                <p class="text-gray-600 mb-4">A complete form that sends leads directly to your CRM. Use this when you want the CRM to be the only place form data goes.</p>
+
+                <h3 class="font-semibold text-gray-800 mb-2">How It Works</h3>
+                <ol class="list-decimal list-inside space-y-2 text-gray-700 text-sm">
+                    <li>Visitor fills out the form on your website</li>
+                    <li>Form sends data directly to your CRM API</li>
+                    <li>Contact is created in your CRM with UTM tracking data</li>
+                    <li>Visitor is redirected to your Thank You page</li>
+                </ol>
+
+                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Setup Steps</h3>
+                <ol class="list-decimal list-inside space-y-2 text-gray-700 text-sm">
+                    <li>Copy the embed code below</li>
+                    <li>In Squarespace, go to the page where you want the form</li>
+                    <li>Add a <strong>Code Block</strong> (not a Form Block)</li>
+                    <li>Paste the code and save</li>
+                    <li>Also install the <strong>Tracking Script</strong> (see below) in your site header for UTM tracking</li>
+                </ol>
+
+                <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <p class="text-sm text-blue-800">
+                        <strong>UTM Tracking:</strong> When visitors arrive via ad links with UTM parameters
+                        (e.g., <code class="bg-blue-100 px-1">?utm_source=google&amp;utm_medium=cpc</code>),
+                        the form automatically captures these values along with the contact info.
+                    </p>
+                </div>
+
+                <div class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <p class="text-sm text-yellow-800">
+                        <strong>Note:</strong> With this option, form data ONLY goes to your CRM. You will NOT get
+                        Squarespace email notifications or Squarespace form storage. If you want both, use Option 2.
+                    </p>
+                </div>
             </div>
 
-            <div class="mt-4 p-4 bg-blue-50 rounded-lg">
-                <p class="text-sm text-blue-800">
-                    <strong>UTM Tracking:</strong> When visitors arrive via links with UTM parameters
-                    (e.g., <code class="bg-blue-100 px-1">?utm_source=google&utm_medium=cpc</code>),
-                    the form automatically captures these values.
-                </p>
-            </div>
-        </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-900">Embed Code</h2>
+                    <button onclick="copyToClipboard('embedCode', this)" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                        Copy Code
+                    </button>
+                </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-900">Embed Code</h2>
-                <button onclick="copyCode()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                    Copy Code
-                </button>
-            </div>
-
-            <div class="relative">
-                <pre id="embedCode" class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed" style="max-height: 400px;"><code>&lt;!-- Simple CRM Lead Form --&gt;
+                <div class="relative">
+                    <pre id="embedCode" class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed" style="max-height: 400px;"><code>&lt;!-- Simple CRM Lead Form --&gt;
 &lt;style&gt;
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&amp;display=swap');
 .scrm-form{font-family:'Poppins',sans-serif;font-weight:600;max-width:400px;margin:0 auto;background:#fff;padding:24px;border-radius:8px}
 .scrm-form *{box-sizing:border-box}
 .scrm-form label{display:block;margin-bottom:4px;font-weight:500;color:#374151;font-size:14px}
@@ -117,7 +136,6 @@ function scrmGetTrackingData(){
 (function(){
   var tracking=scrmGetTrackingData();
   var params=new URLSearchParams(window.location.search);
-  // Use tracking cookie data, fallback to URL params
   document.getElementById('scrm-utm-source').value=tracking?tracking.source:params.get('utm_source')||'';
   document.getElementById('scrm-utm-medium').value=tracking?tracking.medium:params.get('utm_medium')||'';
   document.getElementById('scrm-utm-campaign').value=tracking?tracking.campaign:params.get('utm_campaign')||'';
@@ -177,89 +195,401 @@ function scrmSubmit(e){
 }
 &lt;/script&gt;
 &lt;!-- End Simple CRM Lead Form --&gt;</code></pre>
-            </div>
-
-            <p id="copySuccess" class="hidden mt-2 text-green-600 text-sm font-medium">Copied to clipboard!</p>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">Your API Endpoint</h2>
-            <p class="text-gray-600 mb-2">Form submissions are sent to:</p>
-            <code class="block bg-gray-100 p-3 rounded-lg text-sm break-all">{{ server_url }}/api/form/submit</code>
-
-            <div class="mt-4 p-4 bg-yellow-50 rounded-lg">
-                <p class="text-sm text-yellow-800">
-                    <strong>Important:</strong> When you deploy to production, update the URL in the embed code to your production server URL.
-                </p>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Live Preview -->
-    <div>
-        <div class="bg-white rounded-lg shadow p-6 sticky top-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">Live Preview</h2>
-            <p class="text-gray-500 text-sm mb-6">This is how the form will look on your website</p>
+        <!-- Live Preview -->
+        <div>
+            <div class="bg-white rounded-lg shadow p-6 sticky top-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Live Preview</h2>
+                <p class="text-gray-500 text-sm mb-6">This is how the form will look on your website</p>
 
-            <div class="border rounded-lg p-6 bg-gray-50">
-                <!-- Actual working form preview -->
-                <style>
-                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
-.scrm-form{font-family:'Poppins',sans-serif;font-weight:600;max-width:400px;margin:0 auto;background:#fff;padding:24px;border-radius:8px}
-                .scrm-form *{box-sizing:border-box}
-                .scrm-form label{display:block;margin-bottom:4px;font-weight:500;color:#374151;font-size:14px}
-                .scrm-form input,.scrm-form textarea{width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:16px;transition:border-color .2s,box-shadow .2s}
-                .scrm-form input:focus,.scrm-form textarea:focus{outline:none;border-color:#0a1622;box-shadow:0 0 0 3px rgba(10,22,34,0.1)}
-                .scrm-form button{width:100%;padding:12px;background:#d80010;color:#fff;border:none;border-radius:8px;font-family:'Poppins',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
-                .scrm-form button:hover{background:#b8000d}
-                .scrm-form button:disabled{background:#9ca3af;cursor:not-allowed}
-                .scrm-form .scrm-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-                .scrm-form .scrm-message{padding:12px;border-radius:8px;margin-bottom:16px;font-size:14px}
-                .scrm-form .scrm-success{background:#d1fae5;color:#065f46}
-                .scrm-form .scrm-error{background:#fee2e2;color:#991b1b}
-                @media(max-width:420px){.scrm-form .scrm-row{grid-template-columns:1fr}}
-                </style>
+                <div class="border rounded-lg p-6 bg-gray-50">
+                    <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
+                    .scrm-form{font-family:'Poppins',sans-serif;font-weight:600;max-width:400px;margin:0 auto;background:#fff;padding:24px;border-radius:8px}
+                    .scrm-form *{box-sizing:border-box}
+                    .scrm-form label{display:block;margin-bottom:4px;font-weight:500;color:#374151;font-size:14px}
+                    .scrm-form input,.scrm-form textarea{width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:16px;transition:border-color .2s,box-shadow .2s}
+                    .scrm-form input:focus,.scrm-form textarea:focus{outline:none;border-color:#0a1622;box-shadow:0 0 0 3px rgba(10,22,34,0.1)}
+                    .scrm-form button{width:100%;padding:12px;background:#d80010;color:#fff;border:none;border-radius:8px;font-family:'Poppins',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
+                    .scrm-form button:hover{background:#b8000d}
+                    .scrm-form button:disabled{background:#9ca3af;cursor:not-allowed}
+                    .scrm-form .scrm-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+                    .scrm-form .scrm-message{padding:12px;border-radius:8px;margin-bottom:16px;font-size:14px}
+                    .scrm-form .scrm-success{background:#d1fae5;color:#065f46}
+                    .scrm-form .scrm-error{background:#fee2e2;color:#991b1b}
+                    @media(max-width:420px){.scrm-form .scrm-row{grid-template-columns:1fr}}
+                    </style>
 
-                <form class="scrm-form" id="scrm-lead-form-preview" onsubmit="return scrmSubmitPreview(event)">
-                  <div id="scrm-form-message-preview"></div>
-                  <div class="scrm-row">
-                    <div>
-                      <label for="scrm-fname-preview">First Name *</label>
-                      <input type="text" id="scrm-fname-preview" name="first_name" required>
-                    </div>
-                    <div>
-                      <label for="scrm-lname-preview">Last Name *</label>
-                      <input type="text" id="scrm-lname-preview" name="last_name" required>
-                    </div>
-                  </div>
-                  <div>
-                    <label for="scrm-email-preview">Email *</label>
-                    <input type="email" id="scrm-email-preview" name="email" required>
-                  </div>
-                  <div>
-                    <label for="scrm-phone-preview">Phone *</label>
-                    <input type="tel" id="scrm-phone-preview" name="phone" required>
-                  </div>
-                  <div>
-                    <label for="scrm-message-preview">Message *</label>
-                    <textarea id="scrm-message-preview" name="message" rows="4" placeholder="How can we help you?" required></textarea>
-                  </div>
-                  <button type="submit" id="scrm-submit-btn-preview">GET YOUR SHEET TOGETHER ➤</button>
-                </form>
+                    <form class="scrm-form" id="scrm-lead-form-preview" onsubmit="return scrmSubmitPreview(event)">
+                      <div id="scrm-form-message-preview"></div>
+                      <div class="scrm-row">
+                        <div>
+                          <label for="scrm-fname-preview">First Name *</label>
+                          <input type="text" id="scrm-fname-preview" name="first_name" required>
+                        </div>
+                        <div>
+                          <label for="scrm-lname-preview">Last Name *</label>
+                          <input type="text" id="scrm-lname-preview" name="last_name" required>
+                        </div>
+                      </div>
+                      <div>
+                        <label for="scrm-email-preview">Email *</label>
+                        <input type="email" id="scrm-email-preview" name="email" required>
+                      </div>
+                      <div>
+                        <label for="scrm-phone-preview">Phone *</label>
+                        <input type="tel" id="scrm-phone-preview" name="phone" required>
+                      </div>
+                      <div>
+                        <label for="scrm-message-preview">Message *</label>
+                        <textarea id="scrm-message-preview" name="message" rows="4" placeholder="How can we help you?" required></textarea>
+                      </div>
+                      <button type="submit" id="scrm-submit-btn-preview">GET YOUR SHEET TOGETHER ➤</button>
+                    </form>
+                </div>
+
+                <p class="text-xs text-gray-500 mt-4 text-center">Try it! Submissions here will also go to your CRM.</p>
             </div>
-
-            <p class="text-xs text-gray-500 mt-4 text-center">Try it! Submissions here will also go to your CRM.</p>
         </div>
     </div>
 </div>
 
+<!-- ==================== OPTION 2: SQUARESPACE PIGGYBACK ==================== -->
+<div id="panel-option2" class="tab-panel hidden">
+    <div class="space-y-6">
+
+        <!-- Overview -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">Squarespace Form + CRM Piggyback</h2>
+            <p class="text-gray-600 mb-4">Keep your existing Squarespace form (with email notifications + Squarespace storage) AND automatically send the same data to your CRM with UTM tracking.</p>
+
+            <h3 class="font-semibold text-gray-800 mb-2">How It Works</h3>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700 text-sm">
+                <li>Visitor fills out your normal Squarespace form</li>
+                <li><strong>Script 1</strong> captures the form data right before the submit button is clicked</li>
+                <li>Squarespace handles the form normally (emails you, stores in Squarespace)</li>
+                <li>Squarespace redirects visitor to your Thank You page</li>
+                <li><strong>Script 2</strong> on the Thank You page sends the captured data to your CRM</li>
+                <li>Contact appears in your CRM with full UTM tracking data</li>
+            </ol>
+
+            <div class="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <p class="text-sm text-green-800">
+                    <strong>Best of both worlds:</strong> You keep Squarespace email notifications AND storage as a backup,
+                    plus your CRM gets the lead with UTM source/medium/campaign tracking.
+                </p>
+            </div>
+        </div>
+
+        <!-- What You Need -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">What You Need</h2>
+            <div class="space-y-3">
+                <div class="flex items-start space-x-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-slate-800 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                    <div>
+                        <p class="font-medium text-gray-900">A Squarespace Form Block on your contact page</p>
+                        <p class="text-sm text-gray-500">Your existing form - no changes needed to the form itself</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-slate-800 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                    <div>
+                        <p class="font-medium text-gray-900">A Thank You page with redirect set up</p>
+                        <p class="text-sm text-gray-500">In the form's settings, set "Post-Submit Redirect" to your Thank You page URL</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-slate-800 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                    <div>
+                        <p class="font-medium text-gray-900">3 scripts installed (details below)</p>
+                        <p class="text-sm text-gray-500">Tracking script in site header + Script 1 on form page + Script 2 on Thank You page</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 1: Tracking Script -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center space-x-3 mb-4">
+                <span class="flex-shrink-0 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold">1</span>
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Tracking Script (Site-Wide Header)</h2>
+                    <p class="text-sm text-gray-500">Captures UTM parameters from ad clicks as visitors land on your site</p>
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-50 rounded-lg mb-4">
+                <h3 class="font-semibold text-gray-800 mb-2">Where to install:</h3>
+                <ol class="list-decimal list-inside space-y-1 text-sm text-gray-700">
+                    <li>In Squarespace, go to <strong>Settings</strong></li>
+                    <li>Click <strong>Advanced</strong></li>
+                    <li>Click <strong>Code Injection</strong></li>
+                    <li>Paste this code in the <strong>Header</strong> box</li>
+                    <li>Click <strong>Save</strong></li>
+                </ol>
+            </div>
+
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-500">Tracking Script</span>
+                <button onclick="copyToClipboard('trackingScript', this)" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    Copy Script
+                </button>
+            </div>
+            <pre id="trackingScript" class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed" style="max-height: 300px;"><code>&lt;script&gt;
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var dominated = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid','msclkid'];
+  var dominated_found = false;
+  for(var i=0;i&lt;dominated.length;i++){
+    if(params.get(dominated[i])){dominated_found=true;break;}
+  }
+  if(!dominated_found &amp;&amp; document.cookie.indexOf('scrm_source=')!==-1) return;
+  var data = {
+    source: params.get('utm_source') || '',
+    medium: params.get('utm_medium') || '',
+    campaign: params.get('utm_campaign') || '',
+    term: params.get('utm_term') || '',
+    content: params.get('utm_content') || '',
+    gclid: params.get('gclid') || '',
+    fbclid: params.get('fbclid') || '',
+    msclkid: params.get('msclkid') || '',
+    landing_page: window.location.pathname,
+    referrer: document.referrer
+  };
+  if(!data.source){
+    if(data.gclid){ data.source='google'; data.medium='cpc'; }
+    else if(data.fbclid){ data.source='facebook'; data.medium='cpc'; }
+    else if(data.msclkid){ data.source='bing'; data.medium='cpc'; }
+    else if(document.referrer){
+      var ref = new URL(document.referrer).hostname;
+      if(ref.includes('google')){ data.source='google'; data.medium='organic'; }
+      else if(ref.includes('bing')){ data.source='bing'; data.medium='organic'; }
+      else if(ref.includes('facebook')){ data.source='facebook'; data.medium='social'; }
+      else if(ref.includes('linkedin')){ data.source='linkedin'; data.medium='social'; }
+      else { data.source=ref; data.medium='referral'; }
+    } else {
+      data.source='direct'; data.medium='none';
+    }
+  }
+  var expires = new Date(Date.now() + 90*24*60*60*1000).toUTCString();
+  document.cookie = 'scrm_source=' + encodeURIComponent(JSON.stringify(data)) + ';expires=' + expires + ';path=/;SameSite=Lax';
+})();
+&lt;/script&gt;</code></pre>
+
+            <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+                <p class="text-xs text-blue-800">
+                    <strong>What this does:</strong> When someone clicks your Google/Facebook/Bing ad and lands on your site,
+                    this script saves the UTM data (source, medium, campaign) in a cookie. The cookie lasts 90 days, so even if they
+                    don't fill out the form right away, you'll still know where they came from.
+                </p>
+            </div>
+        </div>
+
+        <!-- STEP 2: Contact Page Script -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center space-x-3 mb-4">
+                <span class="flex-shrink-0 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold">2</span>
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Form Page Script (Contact Page)</h2>
+                    <p class="text-sm text-gray-500">Captures form data before Squarespace submits it</p>
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-50 rounded-lg mb-4">
+                <h3 class="font-semibold text-gray-800 mb-2">Where to install:</h3>
+                <ol class="list-decimal list-inside space-y-1 text-sm text-gray-700">
+                    <li>In Squarespace, go to the page that has your contact form (e.g., /contact)</li>
+                    <li>Click the <strong>gear icon</strong> on the page to open Page Settings</li>
+                    <li>Click the <strong>Advanced</strong> tab</li>
+                    <li>Paste this code in the <strong>Page Header Code Injection</strong> box</li>
+                    <li>Click <strong>Save</strong></li>
+                </ol>
+                <p class="text-xs text-gray-500 mt-2"><strong>Tip:</strong> You can add this to any page that has the form. If you have multiple pages with forms, add it to each one.</p>
+            </div>
+
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-500">Contact Page Script</span>
+                <button onclick="copyToClipboard('formPageScript', this)" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    Copy Script
+                </button>
+            </div>
+            <pre id="formPageScript" class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed" style="max-height: 300px;"><code>&lt;script&gt;
+(function() {
+  function getTrackingData() {
+    var match = document.cookie.match(/(^| )scrm_source=([^;]+)/);
+    if (match) { try { return JSON.parse(decodeURIComponent(match[2])); } catch(e) {} }
+    return null;
+  }
+  function attachToCRM() {
+    var formBlock = document.querySelector('.sqs-block-form');
+    if (!formBlock) { setTimeout(attachToCRM, 500); return; }
+    formBlock.addEventListener('mousedown', function(e) {
+      var btn = e.target.closest('button, input[type="submit"], .form-button-wrapper');
+      if (!btn) return;
+      var fields = {};
+      formBlock.querySelectorAll('input, textarea').forEach(function(el) {
+        var val = el.value;
+        if (!val || el.type === 'hidden' || el.type === 'submit') return;
+        if (val.includes('@') &amp;&amp; !fields.email) fields.email = val;
+        else if (el.tagName === 'TEXTAREA') fields.message = val;
+        else if (/^\+?\d[\d\s\-().]{6,}$/.test(val)) fields.phone = val;
+        else if (!fields.first_name) fields.first_name = val;
+        else if (!fields.last_name) fields.last_name = val;
+      });
+      if (!fields.email) return;
+      var tracking = getTrackingData();
+      var params = new URLSearchParams(window.location.search);
+      var data = {
+        first_name: fields.first_name || '',
+        last_name: fields.last_name || '',
+        email: fields.email || '',
+        phone: fields.phone || '',
+        message: fields.message || '',
+        utm_source: tracking ? tracking.source : params.get('utm_source') || '',
+        utm_medium: tracking ? tracking.medium : params.get('utm_medium') || '',
+        utm_campaign: tracking ? tracking.campaign : params.get('utm_campaign') || '',
+        utm_term: tracking ? tracking.term : params.get('utm_term') || '',
+        utm_content: tracking ? tracking.content : params.get('utm_content') || '',
+        landing_page: tracking ? tracking.landing_page : window.location.pathname,
+        referrer: tracking ? tracking.referrer : document.referrer
+      };
+      sessionStorage.setItem('scrm_pending_lead', JSON.stringify(data));
+    });
+  }
+  if (document.readyState === 'complete') attachToCRM();
+  else window.addEventListener('load', function() { setTimeout(attachToCRM, 1000); });
+})();
+&lt;/script&gt;</code></pre>
+
+            <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+                <p class="text-xs text-blue-800">
+                    <strong>What this does:</strong> When a visitor clicks the submit button on your Squarespace form,
+                    this script grabs the form data (name, email, phone, message) and saves it temporarily in the browser.
+                    It uses "mousedown" so it captures data right before Squarespace processes the form and redirects.
+                </p>
+            </div>
+        </div>
+
+        <!-- STEP 3: Thank You Page Script -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center space-x-3 mb-4">
+                <span class="flex-shrink-0 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold">3</span>
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Thank You Page Script</h2>
+                    <p class="text-sm text-gray-500">Sends the captured data to your CRM after redirect</p>
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-50 rounded-lg mb-4">
+                <h3 class="font-semibold text-gray-800 mb-2">Where to install:</h3>
+                <ol class="list-decimal list-inside space-y-1 text-sm text-gray-700">
+                    <li>In Squarespace, go to your <strong>Thank You</strong> page</li>
+                    <li>Click the <strong>gear icon</strong> on the page to open Page Settings</li>
+                    <li>Click the <strong>Advanced</strong> tab</li>
+                    <li>Paste this code in the <strong>Page Header Code Injection</strong> box</li>
+                    <li>Click <strong>Save</strong></li>
+                </ol>
+                <p class="text-xs text-gray-500 mt-2"><strong>Important:</strong> Make sure your Squarespace form's "Post-Submit Redirect" is set to this Thank You page URL.</p>
+            </div>
+
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-500">Thank You Page Script</span>
+                <button onclick="copyToClipboard('thankYouScript', this)" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    Copy Script
+                </button>
+            </div>
+            <pre id="thankYouScript" class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed" style="max-height: 200px;"><code>&lt;script&gt;
+(function() {
+  var pending = sessionStorage.getItem('scrm_pending_lead');
+  if (!pending) return;
+  sessionStorage.removeItem('scrm_pending_lead');
+  fetch('{{ server_url }}/api/form/submit', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: pending
+  }).catch(function(){});
+})();
+&lt;/script&gt;</code></pre>
+
+            <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+                <p class="text-xs text-blue-800">
+                    <strong>What this does:</strong> When the Thank You page loads, this script checks if there's form data
+                    saved from the contact page. If there is, it sends it to your CRM and clears the saved data.
+                    This is how the data gets from Squarespace into your CRM.
+                </p>
+            </div>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Troubleshooting</h2>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="font-medium text-gray-800">Form data not showing in CRM?</h3>
+                    <ul class="list-disc list-inside text-sm text-gray-600 mt-1 space-y-1">
+                        <li>Make sure the form redirects to the Thank You page (check Form Settings > Post-Submit Redirect)</li>
+                        <li>Verify Script 2 is on the Thank You page, not the contact page</li>
+                        <li>Check that the CRM URL in Script 2 uses <strong>https://</strong> (not http://)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-medium text-gray-800">UTM data not tracking?</h3>
+                    <ul class="list-disc list-inside text-sm text-gray-600 mt-1 space-y-1">
+                        <li>Make sure the Tracking Script (Step 1) is in the site-wide header, not on a specific page</li>
+                        <li>Test by visiting your site with UTM params: <code class="bg-gray-100 px-1 text-xs">yoursite.com/contact?utm_source=test&amp;utm_medium=test</code></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-medium text-gray-800">Can I use this on multiple form pages?</h3>
+                    <p class="text-sm text-gray-600 mt-1">Yes! Add Script 1 (Step 2) to each page that has a form. Script 2 only needs to be on the Thank You page.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ==================== SHARED: API ENDPOINT ==================== -->
+<div class="mt-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Your API Endpoint</h2>
+        <p class="text-gray-600 mb-2">Form submissions are sent to:</p>
+        <code class="block bg-gray-100 p-3 rounded-lg text-sm break-all">{{ server_url }}/api/form/submit</code>
+    </div>
+</div>
+
 <script>
-function copyCode() {
-    var code = document.getElementById('embedCode').textContent;
+function showTab(tab) {
+    // Hide all panels
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.add('hidden'); });
+    // Reset all tabs
+    document.querySelectorAll('[id^="tab-"]').forEach(function(t) {
+        t.classList.remove('bg-white', 'shadow', 'text-gray-900');
+        t.classList.add('text-gray-500');
+    });
+    // Show selected panel
+    document.getElementById('panel-' + tab).classList.remove('hidden');
+    // Activate selected tab
+    var activeTab = document.getElementById('tab-' + tab);
+    activeTab.classList.add('bg-white', 'shadow', 'text-gray-900');
+    activeTab.classList.remove('text-gray-500');
+}
+
+function copyToClipboard(elementId, btn) {
+    var code = document.getElementById(elementId).textContent;
     navigator.clipboard.writeText(code).then(function() {
-        document.getElementById('copySuccess').classList.remove('hidden');
+        var original = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.remove('bg-slate-800');
+        btn.classList.add('bg-green-600');
         setTimeout(function() {
-            document.getElementById('copySuccess').classList.add('hidden');
+            btn.textContent = original;
+            btn.classList.remove('bg-green-600');
+            btn.classList.add('bg-slate-800');
         }, 2000);
     });
 }
