@@ -309,17 +309,46 @@ def contacts_list():
                            sort_dir=sort_dir)
 
 
-@app.route('/contacts/<int:contact_id>')
+@app.route('/contacts/<int:contact_id>', methods=['GET', 'POST'])
 @login_required
 def contact_detail(contact_id):
-    """View a single contact's details."""
+    """View and edit a single contact's details."""
     contact = get_contact(contact_id)
     if not contact:
         return "Contact not found", 404
+
+    if request.method == 'POST':
+        company_id = request.form.get('company_id')
+        company_id = int(company_id) if company_id else None
+        salesperson_id = request.form.get('salesperson_id')
+        salesperson_id = int(salesperson_id) if salesperson_id else None
+
+        update_data = {
+            'first_name': request.form.get('first_name'),
+            'last_name': request.form.get('last_name'),
+            'email': request.form.get('email'),
+            'phone': request.form.get('phone'),
+            'company_id': company_id,
+            'salesperson_id': salesperson_id,
+            'utm_source': request.form.get('utm_source'),
+            'utm_medium': request.form.get('utm_medium'),
+            'utm_campaign': request.form.get('utm_campaign'),
+            'utm_term': request.form.get('utm_term'),
+            'utm_content': request.form.get('utm_content'),
+            'original_source_details': request.form.get('original_source_details'),
+            'deal_value': float(request.form.get('deal_value') or 0),
+            'deal_closed_date': request.form.get('deal_closed_date') or None,
+            'notes': request.form.get('notes'),
+            'sales_notes': request.form.get('sales_notes'),
+        }
+        update_contact(contact_id, **update_data)
+        return redirect(url_for('contact_detail', contact_id=contact_id))
+
     deals = get_deals_for_contact(contact_id)
     user_id = session.get('user_id')
     email_connected = is_gmail_connected(user_id) or is_outlook_connected(user_id)
-    return render_template('contact_detail.html', contact=contact, deals=deals, email_connected=email_connected)
+    return render_template('contact_detail.html', contact=contact, deals=deals, email_connected=email_connected,
+                          companies=get_all_companies(), salespeople=get_salespeople(), mediums=get_utm_mediums())
 
 
 @app.route('/contacts/<int:contact_id>/edit', methods=['GET', 'POST'])

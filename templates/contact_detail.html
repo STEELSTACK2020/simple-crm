@@ -7,6 +7,7 @@
     <a href="/contacts" class="text-slate-800 hover:text-slate-900 text-sm">&larr; Back to Contacts</a>
 </div>
 
+<form method="POST" id="contact-form">
 <div class="bg-white rounded-lg shadow overflow-hidden">
     <!-- Header -->
     <div class="gradient-bg px-6 py-8">
@@ -16,16 +17,10 @@
                 <p class="text-slate-200 mt-1">{{ contact.email }}</p>
             </div>
             <div class="flex space-x-3">
-                <a href="/contacts/{{ contact.id }}/edit"
-                   class="bg-white text-slate-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium text-sm">
-                    Edit Contact
-                </a>
-                <form action="/contacts/{{ contact.id }}/delete" method="POST" class="inline"
-                      onsubmit="return confirm('Are you sure you want to delete this contact?');">
-                    <button type="submit" class="bg-red-500 text-white hover:bg-red-600 px-4 py-2 rounded-lg font-medium text-sm">
-                        Delete
-                    </button>
-                </form>
+                <button type="submit"
+                   class="bg-green-500 text-white hover:bg-green-600 px-4 py-2 rounded-lg font-medium text-sm">
+                    Save Changes
+                </button>
             </div>
         </div>
 
@@ -48,87 +43,89 @@
             <!-- Basic Info -->
             <div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Contact Information</h3>
-                <dl class="space-y-4">
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">Full Name</dt>
-                        <dd class="text-sm text-gray-900 mt-1">{{ contact.first_name }} {{ contact.last_name }}</dd>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">First Name</label>
+                            <input type="text" name="first_name" value="{{ contact.first_name }}" required
+                                   class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Last Name</label>
+                            <input type="text" name="last_name" value="{{ contact.last_name }}" required
+                                   class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                        </div>
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Email</dt>
-                        <dd class="text-sm text-gray-900 mt-1">
-                            <a href="mailto:{{ contact.email }}" class="text-slate-800 hover:underline">{{ contact.email }}</a>
-                        </dd>
+                        <label class="text-sm font-medium text-gray-500">Email</label>
+                        <input type="email" name="email" value="{{ contact.email }}" required
+                               class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Phone</dt>
-                        <dd class="text-sm text-gray-900 mt-1">
-                            {% if contact.phone %}
-                            <a href="tel:{{ contact.phone }}" class="text-slate-800 hover:underline">{{ contact.phone }}</a>
-                            {% else %}
-                            <span class="text-gray-400">Not provided</span>
-                            {% endif %}
-                        </dd>
+                        <label class="text-sm font-medium text-gray-500">Phone</label>
+                        <input type="tel" name="phone" value="{{ contact.phone or '' }}"
+                               class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Assigned Salesperson</dt>
-                        <dd class="text-sm text-gray-900 mt-1">
-                            {% if contact.salesperson_name %}
-                            <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 font-medium">{{ contact.salesperson_name }}</span>
-                            {% else %}
-                            <span class="text-gray-400">Not assigned</span>
-                            {% endif %}
-                        </dd>
+                        <label class="text-sm font-medium text-gray-500">Company</label>
+                        <select name="company_id" class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                            <option value="">-- Select Company --</option>
+                            {% for company in companies %}
+                            <option value="{{ company.id }}" {% if contact.company_id == company.id %}selected{% endif %}>{{ company.name }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                </dl>
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Assigned Salesperson</label>
+                        <select name="salesperson_id" class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-green-50">
+                            <option value="">-- Select Salesperson --</option>
+                            {% for sp in salespeople %}
+                            <option value="{{ sp.id }}" {% if contact.salesperson_id == sp.id %}selected{% endif %}>{{ sp.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <!-- UTM Parameters -->
             <div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Traffic Source (UTM)</h3>
-                <dl class="space-y-4">
+                <div class="space-y-4">
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Source</dt>
-                        <dd class="text-sm text-gray-900 mt-1">
-                            {% if contact.utm_source %}
-                            <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-800">{{ contact.utm_source }}</span>
-                            {% else %}
-                            <span class="text-gray-400">Not tracked</span>
-                            {% endif %}
-                        </dd>
+                        <label class="text-sm font-medium text-gray-500">Source</label>
+                        <input type="text" name="utm_source" value="{{ contact.utm_source or '' }}" placeholder="e.g., google, facebook"
+                               class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Medium</dt>
-                        <dd class="text-sm text-gray-900 mt-1">
-                            {% if contact.utm_medium %}
-                            <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-900">{{ contact.utm_medium }}</span>
-                            {% else %}
-                            <span class="text-gray-400">Not tracked</span>
-                            {% endif %}
-                        </dd>
+                        <label class="text-sm font-medium text-gray-500">Medium</label>
+                        <select name="utm_medium" class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                            <option value="">Select medium...</option>
+                            {% for medium in mediums %}
+                            <option value="{{ medium }}" {% if contact.utm_medium == medium %}selected{% endif %}>{{ medium }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Campaign</dt>
-                        <dd class="text-sm text-gray-900 mt-1">
-                            {% if contact.utm_campaign %}
-                            <span class="px-2 py-1 rounded-full bg-green-100 text-green-800">{{ contact.utm_campaign }}</span>
-                            {% else %}
-                            <span class="text-gray-400">Not tracked</span>
-                            {% endif %}
-                        </dd>
+                        <label class="text-sm font-medium text-gray-500">Campaign</label>
+                        <input type="text" name="utm_campaign" value="{{ contact.utm_campaign or '' }}" placeholder="e.g., spring_sale"
+                               class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Term (Keyword)</dt>
-                        <dd class="text-sm text-gray-900 mt-1">{{ contact.utm_term or '-' }}</dd>
+                        <label class="text-sm font-medium text-gray-500">Term (Keyword)</label>
+                        <input type="text" name="utm_term" value="{{ contact.utm_term or '' }}" placeholder="e.g., crm software"
+                               class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Content</dt>
-                        <dd class="text-sm text-gray-900 mt-1">{{ contact.utm_content or '-' }}</dd>
+                        <label class="text-sm font-medium text-gray-500">Content</label>
+                        <input type="text" name="utm_content" value="{{ contact.utm_content or '' }}" placeholder="e.g., ad_variation_a"
+                               class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Original Source Details</dt>
-                        <dd class="text-sm text-gray-900 mt-1">{{ contact.original_source_details or '-' }}</dd>
+                        <label class="text-sm font-medium text-gray-500">Original Source Details</label>
+                        <input type="text" name="original_source_details" value="{{ contact.original_source_details or '' }}" placeholder="e.g., Heard about us from a friend"
+                               class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
                     </div>
-                </dl>
+                </div>
             </div>
         </div>
 
@@ -137,16 +134,20 @@
             <!-- Deal Info -->
             <div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Deal Information</h3>
-                <dl class="space-y-4">
+                <div class="space-y-4">
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Deal Value</dt>
-                        <dd class="text-2xl font-bold mt-1 {{ 'text-green-600' if contact.deal_value > 0 else 'text-gray-400' }}">
-                            ${{ "{:,.2f}".format(contact.deal_value) }}
-                        </dd>
+                        <label class="text-sm font-medium text-gray-500">Deal Value ($)</label>
+                        <input type="number" name="deal_value" value="{{ contact.deal_value }}" step="0.01" min="0"
+                               class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Deal Status</dt>
-                        <dd class="mt-1">
+                        <label class="text-sm font-medium text-gray-500">Deal Close Date</label>
+                        <input type="date" name="deal_closed_date" value="{{ contact.deal_closed_date or '' }}"
+                               class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Deal Status</label>
+                        <div class="mt-1">
                             {% if contact.deal_value > 0 and contact.deal_closed_date %}
                             <span class="px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">Closed</span>
                             {% elif contact.deal_value > 0 %}
@@ -154,44 +155,31 @@
                             {% else %}
                             <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium">No Deal Yet</span>
                             {% endif %}
-                        </dd>
+                        </div>
                     </div>
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">Close Date</dt>
-                        <dd class="text-sm text-gray-900 mt-1">
-                            {% if contact.deal_closed_date %}
-                            {{ contact.deal_closed_date|format_date }}
-                            {% else %}
-                            <span class="text-gray-400">Not set</span>
-                            {% endif %}
-                        </dd>
-                    </div>
-                </dl>
+                </div>
             </div>
 
             <!-- Customer Message -->
             <div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Customer Message</h3>
-                <div class="bg-gray-50 rounded-lg p-4 min-h-[100px]">
-                    {% if contact.notes %}
-                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ contact.notes }}</p>
-                    {% else %}
-                    <p class="text-sm text-gray-400 italic">No message from customer</p>
-                    {% endif %}
-                </div>
+                <textarea name="notes" rows="4" placeholder="Message or notes from the customer..."
+                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 bg-gray-50">{{ contact.notes or '' }}</textarea>
             </div>
         </div>
 
         <!-- Sales Notes -->
         <div class="mt-8">
             <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Sales Notes</h3>
-            <div class="bg-blue-50 rounded-lg p-4 min-h-[100px]">
-                {% if contact.sales_notes %}
-                <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ contact.sales_notes }}</p>
-                {% else %}
-                <p class="text-sm text-gray-400 italic">No sales notes added</p>
-                {% endif %}
-            </div>
+            <textarea name="sales_notes" rows="4" placeholder="Add internal sales notes about this contact..."
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50">{{ contact.sales_notes or '' }}</textarea>
+        </div>
+
+        <!-- Save Button (bottom) -->
+        <div class="mt-6 pt-4 border-t flex justify-end">
+            <button type="submit" class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium text-sm">
+                Save Changes
+            </button>
         </div>
 
         <!-- Associated Deals -->
@@ -257,7 +245,7 @@
                             <p id="modal-to" class="text-sm text-gray-500"></p>
                             <p id="modal-date" class="text-xs text-gray-400 mt-1"></p>
                         </div>
-                        <button onclick="closeEmailModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                        <button type="button" onclick="closeEmailModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
                     </div>
                     <div id="modal-body" class="p-4 overflow-y-auto flex-1 text-sm text-gray-700">
                         <div class="text-center py-4 text-gray-500">
@@ -272,7 +260,6 @@
                     const modal = document.getElementById('email-modal');
                     const bodyContainer = document.getElementById('modal-body');
 
-                    // Show modal with loading state
                     modal.classList.remove('hidden');
                     document.getElementById('modal-subject').textContent = subject;
                     document.getElementById('modal-from').textContent = '';
@@ -280,7 +267,6 @@
                     document.getElementById('modal-date').textContent = '';
                     bodyContainer.innerHTML = '<div class="text-center py-4 text-gray-500"><span class="animate-pulse">Loading email...</span></div>';
 
-                    // Fetch full email
                     fetch(`/api/emails/${source}/${emailId}`)
                         .then(response => response.json())
                         .then(data => {
@@ -291,12 +277,9 @@
                                 document.getElementById('modal-to').textContent = 'To: ' + email.to;
                                 document.getElementById('modal-date').textContent = email.date ? new Date(email.date).toLocaleString() : '';
 
-                                // Display body - check if HTML or plain text
                                 if (email.body.includes('<') && email.body.includes('>')) {
-                                    // HTML content - render in iframe for safety
                                     bodyContainer.innerHTML = `<iframe srcdoc="${email.body.replace(/"/g, '&quot;')}" class="w-full min-h-[300px] border-0" sandbox="allow-same-origin"></iframe>`;
                                 } else {
-                                    // Plain text - preserve whitespace
                                     bodyContainer.innerHTML = `<pre class="whitespace-pre-wrap font-sans">${email.body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
                                 }
                             } else {
@@ -312,17 +295,14 @@
                     document.getElementById('email-modal').classList.add('hidden');
                 }
 
-                // Close modal on escape key
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape') closeEmailModal();
                 });
 
-                // Close modal on backdrop click
                 document.getElementById('email-modal').addEventListener('click', function(e) {
                     if (e.target === this) closeEmailModal();
                 });
 
-                // Fetch emails on page load
                 fetch('/api/emails/{{ contact.email }}?max_results=15')
                     .then(response => response.json())
                     .then(data => {
@@ -384,11 +364,11 @@
                     <div class="flex items-center justify-between">
                         <p class="text-xs font-medium {{ 'text-red-600' if not contact.last_activity_date else 'text-gray-600' }} uppercase" id="activity-label">Last Activity</p>
                         <div class="relative" id="activity-dropdown">
-                            <button onclick="document.getElementById('activity-menu').classList.toggle('hidden')" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                            <button type="button" onclick="document.getElementById('activity-menu').classList.toggle('hidden')" class="text-gray-400 hover:text-gray-600 focus:outline-none">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><circle cx="4" cy="10" r="2"/><circle cx="10" cy="10" r="2"/><circle cx="16" cy="10" r="2"/></svg>
                             </button>
                             <div id="activity-menu" class="hidden absolute right-0 top-6 w-40 bg-white rounded-lg shadow-lg border z-10">
-                                <button onclick="resetActivity()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">
+                                <button type="button" onclick="resetActivity()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">
                                     Reset to Never
                                 </button>
                             </div>
@@ -409,7 +389,6 @@
             </div>
 
             <script>
-            // Close dropdown when clicking outside
             document.addEventListener('click', function(e) {
                 if (!document.getElementById('activity-dropdown').contains(e.target)) {
                     document.getElementById('activity-menu').classList.add('hidden');
@@ -435,5 +414,16 @@
             </script>
         </div>
     </div>
+</div>
+</form>
+
+<!-- Delete Form (separate from main form) -->
+<div class="mt-4 flex justify-end">
+    <form action="/contacts/{{ contact.id }}/delete" method="POST"
+          onsubmit="return confirm('Are you sure you want to delete this contact?');">
+        <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-medium">
+            Delete Contact
+        </button>
+    </form>
 </div>
 {% endblock %}
