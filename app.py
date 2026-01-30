@@ -1789,9 +1789,9 @@ def quote_pdf(quote_id):
     # Generate PDF
     pdf_buffer = generate_quote_pdf(quote, quote.get('line_items', []))
 
-    # Create filename from quote number and customer
-    customer_name = quote.get('customer_name') or quote.get('customer_company') or 'Customer'
-    safe_name = "".join(c for c in customer_name if c.isalnum() or c in (' ', '-', '_')).strip()
+    # Create filename from quote number and company (prefer company name over customer name)
+    display_name = quote.get('customer_company') or quote.get('customer_name') or 'Customer'
+    safe_name = "".join(c for c in display_name if c.isalnum() or c in (' ', '-', '_')).strip()
     filename = f"STEELSTACK_{safe_name}_{quote.get('quote_number', 'Quote')}.pdf"
 
     return send_file(
@@ -2325,7 +2325,7 @@ def view_fix_attachment(fix_id):
     """Serve a fix request attachment from the database."""
     fix = get_fix_request(fix_id)
     if not fix or not fix.get('attachment_data'):
-        return "Attachment not found", 404
+        return "Attachment unavailable - file was lost during a server redeploy. New attachments will be preserved.", 404
     content_type = fix.get('attachment_content_type', 'application/octet-stream')
     filename = fix.get('attachment_filename', 'attachment')
     response = app.make_response(bytes(fix['attachment_data']))

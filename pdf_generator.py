@@ -143,8 +143,8 @@ def generate_quote_pdf(quote, items):
     elements.append(Spacer(1, 0.1*inch))
 
     # ========== TITLE BANNER ==========
-    customer_name = quote.get('customer_name') or quote.get('customer_company') or 'Customer'
-    title_text = f"STEELSTACK | {customer_name.upper()}"
+    banner_name = quote.get('customer_company') or quote.get('customer_name') or 'Customer'
+    title_text = f"STEELSTACK | {banner_name.upper()}"
     title_para = Paragraph(title_text, title_style)
 
     # Customer info (left side)
