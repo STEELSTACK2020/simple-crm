@@ -34,7 +34,7 @@
                 <td class="px-6 py-4 text-sm text-gray-500 max-w-md">{{ fix.message }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                     {% if fix.attachment_filename %}
-                    <a href="/static/uploads/fixes/{{ fix.attachment_filename }}" target="_blank" class="text-blue-600 hover:underline">View</a>
+                    <a href="/fixes/{{ fix.id }}/attachment" target="_blank" class="text-blue-600 hover:underline">View</a>
                     {% else %}
                     <span class="text-gray-400">-</span>
                     {% endif %}

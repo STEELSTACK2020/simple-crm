@@ -237,11 +237,17 @@ def generate_quote_pdf(quote, items):
             desc_lines = item['description'].replace('\n', '<br/>')
             item_content += f"<br/><font size=9 color='#6b7280'>{desc_lines}</font>"
 
+        # Show discounted unit price so wholesalers don't see the original
+        unit_price = float(item.get('unit_price', 0))
+        item_discount = float(item.get('discount_percent', 0))
+        if item_discount > 0:
+            unit_price = unit_price * (1 - item_discount / 100)
+
         table_data.append([
             Paragraph(item_content, normal_style),
             Paragraph(str(int(item.get('quantity', 1)) if item.get('quantity', 1) == int(item.get('quantity', 1)) else item.get('quantity', 1)),
                      ParagraphStyle('', parent=normal_style, alignment=TA_CENTER)),
-            Paragraph(format_currency(item.get('unit_price', 0)),
+            Paragraph(format_currency(unit_price),
                      ParagraphStyle('', parent=normal_style, alignment=TA_RIGHT)),
             Paragraph(format_currency(item.get('line_total', 0)),
                      ParagraphStyle('', parent=normal_style, alignment=TA_RIGHT))

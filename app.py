@@ -36,7 +36,7 @@ from database import (
     # Quick notes
     get_quick_notes, save_quick_notes,
     # Fix requests
-    add_fix_request, get_all_fix_requests, init_fix_requests_table, update_fix_request_status,
+    add_fix_request, get_fix_request, get_all_fix_requests, init_fix_requests_table, update_fix_request_status,
     # Migrations
     add_sales_notes_column, add_contact_salesperson_column
 )
@@ -2272,7 +2272,6 @@ def forms_page():
 @login_required
 def submit_fix_request():
     """Handle fix request/bug report submission."""
-    import os
     from werkzeug.utils import secure_filename
 
     name = request.form.get('name', '').strip()
@@ -2281,23 +2280,21 @@ def submit_fix_request():
     if not name or not message:
         return redirect(url_for('quotes_list') + '?error=Name+and+message+are+required')
 
-    # Handle file upload
+    # Handle file upload - store in database for Railway compatibility
     attachment_filename = None
+    attachment_data = None
+    attachment_content_type = None
     if 'attachment' in request.files:
         file = request.files['attachment']
         if file and file.filename:
-            # Create uploads directory if it doesn't exist
-            upload_dir = os.path.join(os.path.dirname(__file__), 'static', 'uploads', 'fixes')
-            os.makedirs(upload_dir, exist_ok=True)
-
-            # Secure the filename and save
             filename = secure_filename(file.filename)
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             attachment_filename = f"{timestamp}_{filename}"
-            file.save(os.path.join(upload_dir, attachment_filename))
+            attachment_data = file.read()
+            attachment_content_type = file.content_type or 'application/octet-stream'
 
     # Save to database
-    result = add_fix_request(name, message, attachment_filename)
+    result = add_fix_request(name, message, attachment_filename, attachment_data, attachment_content_type)
 
     if result['success']:
         return redirect(url_for('quotes_list') + '?success=Issue+reported+successfully!+Thank+you+for+your+feedback.')
@@ -2320,6 +2317,21 @@ def mark_fix_done(fix_id):
     update_fix_request_status(fix_id, 'done')
     # Redirect back to the page they came from
     return redirect(request.referrer or url_for('dashboard'))
+
+
+@app.route('/fixes/<int:fix_id>/attachment')
+@login_required
+def view_fix_attachment(fix_id):
+    """Serve a fix request attachment from the database."""
+    fix = get_fix_request(fix_id)
+    if not fix or not fix.get('attachment_data'):
+        return "Attachment not found", 404
+    content_type = fix.get('attachment_content_type', 'application/octet-stream')
+    filename = fix.get('attachment_filename', 'attachment')
+    response = app.make_response(bytes(fix['attachment_data']))
+    response.headers['Content-Type'] = content_type
+    response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+    return response
 
 
 if __name__ == '__main__':

@@ -3027,29 +3027,42 @@ def save_quick_notes(content, user_id=1):
 
 # ============== Fix Requests ==============
 
-def add_fix_request(name, message, attachment_filename=None):
+def add_fix_request(name, message, attachment_filename=None, attachment_data=None, attachment_content_type=None):
     """Add a new fix request/bug report."""
     conn = get_connection()
     cursor = conn.cursor()
 
     if USE_POSTGRES:
         cursor.execute("""
-            INSERT INTO fix_requests (name, message, attachment_filename, status, created_at)
-            VALUES (%s, %s, %s, 'pending', CURRENT_TIMESTAMP)
+            INSERT INTO fix_requests (name, message, attachment_filename, attachment_data, attachment_content_type, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, 'pending', CURRENT_TIMESTAMP)
             RETURNING id
-        """, (name, message, attachment_filename))
+        """, (name, message, attachment_filename, attachment_data, attachment_content_type))
         result = cursor.fetchone()
         fix_id = result['id'] if result else None
     else:
         cursor.execute("""
-            INSERT INTO fix_requests (name, message, attachment_filename, status, created_at)
-            VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)
-        """, (name, message, attachment_filename))
+            INSERT INTO fix_requests (name, message, attachment_filename, attachment_data, attachment_content_type, status, created_at)
+            VALUES (?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)
+        """, (name, message, attachment_filename, attachment_data, attachment_content_type))
         fix_id = cursor.lastrowid
 
     conn.commit()
     conn.close()
     return {"success": True, "id": fix_id}
+
+
+def get_fix_request(fix_id):
+    """Get a single fix request by ID."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    if USE_POSTGRES:
+        cursor.execute("SELECT * FROM fix_requests WHERE id = %s", (fix_id,))
+    else:
+        cursor.execute("SELECT * FROM fix_requests WHERE id = ?", (fix_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 def get_all_fix_requests():
@@ -3096,10 +3109,18 @@ def init_fix_requests_table():
                 name TEXT NOT NULL,
                 message TEXT NOT NULL,
                 attachment_filename TEXT,
+                attachment_data BYTEA,
+                attachment_content_type TEXT,
                 status TEXT DEFAULT 'pending',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Add columns if table already exists
+        try:
+            cursor.execute("ALTER TABLE fix_requests ADD COLUMN IF NOT EXISTS attachment_data BYTEA")
+            cursor.execute("ALTER TABLE fix_requests ADD COLUMN IF NOT EXISTS attachment_content_type TEXT")
+        except:
+            pass
     else:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS fix_requests (
@@ -3107,10 +3128,21 @@ def init_fix_requests_table():
                 name TEXT NOT NULL,
                 message TEXT NOT NULL,
                 attachment_filename TEXT,
+                attachment_data BLOB,
+                attachment_content_type TEXT,
                 status TEXT DEFAULT 'pending',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Add columns if table already exists
+        try:
+            cursor.execute("ALTER TABLE fix_requests ADD COLUMN attachment_data BLOB")
+        except:
+            pass
+        try:
+            cursor.execute("ALTER TABLE fix_requests ADD COLUMN attachment_content_type TEXT")
+        except:
+            pass
 
     conn.commit()
     conn.close()
