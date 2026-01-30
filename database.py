@@ -1255,7 +1255,12 @@ def get_deal(deal_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM deals WHERE id = ?", (deal_id,))
+    cursor.execute("""
+        SELECT d.*, co.name as company_name
+        FROM deals d
+        LEFT JOIN companies co ON d.company_id = co.id
+        WHERE d.id = ?
+    """, (deal_id,))
     row = cursor.fetchone()
 
     if not row:

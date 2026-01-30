@@ -176,8 +176,25 @@
         </div>
     </div>
 
-    <!-- Sidebar - Contacts -->
+    <!-- Sidebar -->
     <div class="space-y-6">
+        <!-- Company -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-4 py-3 border-b bg-gray-50">
+                <h3 class="font-semibold text-gray-900">Company</h3>
+            </div>
+            <div class="p-4">
+                {% if deal.company_name %}
+                <a href="/companies/{{ deal.company_id }}" class="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                    <p class="font-medium text-gray-900">{{ deal.company_name }}</p>
+                </a>
+                {% else %}
+                <p class="text-gray-500 text-sm">No company linked to this deal.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Contacts -->
         <div class="bg-white rounded-lg shadow" style="overflow: visible;">
             <div class="px-4 py-3 border-b bg-gray-50 rounded-t-lg">
                 <h3 class="font-semibold text-gray-900">Contacts ({{ deal.contacts|length }})</h3>
