@@ -2308,9 +2308,13 @@ def search_companies(query):
 
 
 def delete_company(company_id):
-    """Delete a company."""
+    """Delete a company. Unlinks related contacts, deals, and quotes first."""
     conn = get_connection()
     cursor = conn.cursor()
+    # Unlink related records to avoid foreign key violations
+    cursor.execute("UPDATE contacts SET company_id = NULL WHERE company_id = ?", (company_id,))
+    cursor.execute("UPDATE deals SET company_id = NULL WHERE company_id = ?", (company_id,))
+    cursor.execute("UPDATE quotes SET company_id = NULL WHERE company_id = ?", (company_id,))
     cursor.execute("DELETE FROM companies WHERE id = ?", (company_id,))
     conn.commit()
     deleted = cursor.rowcount
