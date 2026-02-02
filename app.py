@@ -751,7 +751,8 @@ def traffic_oauth_authorize():
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
-        prompt='select_account consent'
+        prompt='select_account consent',
+        login_hint='sales_mtf@blomand.net'
     )
 
     # Store state in session for verification
