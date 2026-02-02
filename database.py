@@ -1640,18 +1640,14 @@ def search_deals(query):
 UTM_MEDIUMS = [
     'Paid Search',
     'Organic Search',
+    'Paid Social',
+    'Organic Social',
+    'Direct Traffic',
+    'Referrals',
+    'Offline Sources',
     'Email',
-    'Social',
-    'Referral',
     'Display',
-    'Direct',
-    'affiliate',
-    'partner',
-    'trade_show',
-    'webinar',
-    'cold_call',
-    'inbound_call',
-    'walk_in',
+    'AI Referrals',
     'other'
 ]
 

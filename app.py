@@ -66,23 +66,43 @@ app.secret_key = 'simple-crm-secret-key-change-in-production'
 # ============== UTM Medium Normalization ==============
 
 UTM_MEDIUM_MAP = {
+    # Paid Search variants
     'cpc': 'Paid Search',
     'ppc': 'Paid Search',
+    'paid': 'Paid Search',
     'paid search': 'Paid Search',
     'paidsearch': 'Paid Search',
+    'sem': 'Paid Search',
+    'adwords': 'Paid Search',
+    'google ads': 'Paid Search',
+    'bing ads': 'Paid Search',
+    # Organic Search
     'organic': 'Organic Search',
     'organic search': 'Organic Search',
-    'social': 'Social',
-    'social media': 'Social',
+    # Paid Social
+    'paid social': 'Paid Social',
+    'paidsocial': 'Paid Social',
+    # Organic Social
+    'social': 'Organic Social',
+    'social media': 'Organic Social',
+    'organic social': 'Organic Social',
+    # Direct Traffic
+    'direct': 'Direct Traffic',
+    'direct traffic': 'Direct Traffic',
+    'none': 'Direct Traffic',
+    '(none)': 'Direct Traffic',
+    '(not set)': 'Direct Traffic',
+    # Referrals
+    'referral': 'Referrals',
+    'referrals': 'Referrals',
+    # Other
     'email': 'Email',
     'e-mail': 'Email',
-    'referral': 'Referral',
     'display': 'Display',
     'banner': 'Display',
-    'direct': 'Direct',
-    'none': 'Direct',
-    '(none)': 'Direct',
-    '(not set)': 'Direct',
+    'offline sources': 'Offline Sources',
+    'offline': 'Offline Sources',
+    'inbound_call': 'Offline Sources',
 }
 
 def normalize_utm_medium(medium):
