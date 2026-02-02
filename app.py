@@ -63,6 +63,35 @@ app = Flask(__name__)
 app.secret_key = 'simple-crm-secret-key-change-in-production'
 
 
+# ============== UTM Medium Normalization ==============
+
+UTM_MEDIUM_MAP = {
+    'cpc': 'Paid Search',
+    'ppc': 'Paid Search',
+    'paid search': 'Paid Search',
+    'paidsearch': 'Paid Search',
+    'organic': 'Organic Search',
+    'organic search': 'Organic Search',
+    'social': 'Social',
+    'social media': 'Social',
+    'email': 'Email',
+    'e-mail': 'Email',
+    'referral': 'Referral',
+    'display': 'Display',
+    'banner': 'Display',
+    'direct': 'Direct',
+    'none': 'Direct',
+    '(none)': 'Direct',
+    '(not set)': 'Direct',
+}
+
+def normalize_utm_medium(medium):
+    """Normalize UTM medium values to consistent names."""
+    if not medium or not medium.strip():
+        return medium
+    return UTM_MEDIUM_MAP.get(medium.strip().lower(), medium.strip())
+
+
 # Custom Jinja filter to handle dates (works with both strings and datetime objects)
 @app.template_filter('format_date')
 def format_date_filter(value, format='%Y-%m-%d'):
@@ -331,7 +360,7 @@ def contact_detail(contact_id):
             'company_id': company_id,
             'salesperson_id': salesperson_id,
             'utm_source': request.form.get('utm_source'),
-            'utm_medium': request.form.get('utm_medium'),
+            'utm_medium': normalize_utm_medium(request.form.get('utm_medium')),
             'utm_campaign': request.form.get('utm_campaign'),
             'utm_term': request.form.get('utm_term'),
             'utm_content': request.form.get('utm_content'),
@@ -377,7 +406,7 @@ def contact_edit(contact_id):
             'company_id': company_id,
             'salesperson_id': salesperson_id,
             'utm_source': request.form.get('utm_source'),
-            'utm_medium': request.form.get('utm_medium'),
+            'utm_medium': normalize_utm_medium(request.form.get('utm_medium')),
             'utm_campaign': request.form.get('utm_campaign'),
             'utm_term': request.form.get('utm_term'),
             'utm_content': request.form.get('utm_content'),
@@ -425,7 +454,7 @@ def contact_add():
             email=request.form.get('email'),
             phone=request.form.get('phone'),
             utm_source=request.form.get('utm_source'),
-            utm_medium=request.form.get('utm_medium'),
+            utm_medium=normalize_utm_medium(request.form.get('utm_medium')),
             utm_campaign=request.form.get('utm_campaign'),
             utm_term=request.form.get('utm_term'),
             utm_content=request.form.get('utm_content'),
@@ -543,7 +572,7 @@ def import_contacts():
                 notes=customer_message or None,  # notes -> Customer Message
                 sales_notes=sales_notes or None,  # Notes -> Sales Notes
                 utm_source=utm_source or None,
-                utm_medium=utm_medium or None
+                utm_medium=normalize_utm_medium(utm_medium) or None
             )
 
             if result.get('success'):
@@ -1097,7 +1126,7 @@ def deal_add():
             stage=request.form.get('stage', 'new_deal'),
             salesperson=request.form.get('salesperson') or None,
             utm_source=request.form.get('utm_source') or None,
-            utm_medium=request.form.get('utm_medium') or None,
+            utm_medium=normalize_utm_medium(request.form.get('utm_medium')) or None,
             utm_campaign=request.form.get('utm_campaign') or None,
             expected_close_date=request.form.get('expected_close_date') or None,
             notes=request.form.get('notes') or None,
@@ -1145,7 +1174,7 @@ def deal_edit(deal_id):
             stage=request.form.get('stage'),
             salesperson=request.form.get('salesperson') or None,
             utm_source=request.form.get('utm_source') or None,
-            utm_medium=request.form.get('utm_medium') or None,
+            utm_medium=normalize_utm_medium(request.form.get('utm_medium')) or None,
             utm_campaign=request.form.get('utm_campaign') or None,
             expected_close_date=request.form.get('expected_close_date') or None,
             actual_close_date=request.form.get('actual_close_date') or None,
@@ -1196,7 +1225,7 @@ def deal_update_reported_source(deal_id):
 @login_required
 def deal_update_source(deal_id):
     """Update the verified lead source (utm_medium) for a deal."""
-    utm_medium = request.form.get('utm_medium', '').strip()
+    utm_medium = normalize_utm_medium(request.form.get('utm_medium', '').strip())
     update_deal(deal_id, utm_medium=utm_medium if utm_medium else None)
     return redirect(url_for('deal_detail', deal_id=deal_id))
 
@@ -1546,7 +1575,7 @@ def quote_add():
 
         # Get UTM source info (needed for both contact and deal)
         utm_source = request.form.get('utm_source', '').strip() or None
-        utm_medium = request.form.get('utm_medium', '').strip() or None
+        utm_medium = normalize_utm_medium(request.form.get('utm_medium', '').strip()) or None
         utm_campaign = request.form.get('utm_campaign', '').strip() or None
 
         # Auto-create contact if customer info provided but no existing contact selected
@@ -2262,14 +2291,14 @@ def api_form_submit():
     if not data.get('email'):
         return jsonify({"success": False, "error": "Email is required"}), 400
 
-    # Add the contact
+    # Add the contact (normalize UTM medium on intake)
     result = add_contact(
         first_name=data.get('first_name', ''),
         last_name=data.get('last_name', ''),
         email=data.get('email', ''),
         phone=data.get('phone'),
         utm_source=data.get('utm_source'),
-        utm_medium=data.get('utm_medium'),
+        utm_medium=normalize_utm_medium(data.get('utm_medium')),
         utm_campaign=data.get('utm_campaign'),
         utm_term=data.get('utm_term'),
         utm_content=data.get('utm_content'),

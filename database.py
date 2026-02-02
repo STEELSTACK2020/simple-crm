@@ -1638,14 +1638,14 @@ def search_deals(query):
 
 # Predefined UTM mediums
 UTM_MEDIUMS = [
-    'cpc',
-    'organic',
-    'email',
-    'social',
-    'referral',
-    'display',
+    'Paid Search',
+    'Organic Search',
+    'Email',
+    'Social',
+    'Referral',
+    'Display',
+    'Direct',
     'affiliate',
-    'direct',
     'partner',
     'trade_show',
     'webinar',
