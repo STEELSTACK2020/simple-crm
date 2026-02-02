@@ -601,7 +601,7 @@ def get_demo_traffic_by_month(year=None):
     channels = ['Organic Search', 'Paid Search', 'Direct', 'Paid Social', 'Organic Social', 'Referral', 'Email']
 
     import random
-    random.seed(42)
+    random.seed(42 + int(year))
 
     chart_data = {}
     for channel in channels:

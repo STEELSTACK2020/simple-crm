@@ -2121,9 +2121,15 @@ def api_traffic_by_year(year):
     if is_ga_connected():
         data = fetch_traffic_by_channel_and_month(int(year), website_id=website_id)
         if data and 'error' not in data:
+            data['is_demo'] = False
             return jsonify(data)
+        else:
+            print(f"[Traffic] GA fetch failed for year {year}: {data}")
     # Return demo data if GA not configured or error
-    return jsonify(get_demo_traffic_by_month(int(year)))
+    demo = get_demo_traffic_by_month(int(year))
+    demo['is_demo'] = True
+    print(f"[Traffic] Returning demo data for year {year}")
+    return jsonify(demo)
 
 
 @app.route('/api/leads/by-month-medium/<month>/<medium>', methods=['GET'])
