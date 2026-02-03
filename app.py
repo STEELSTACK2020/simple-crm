@@ -38,7 +38,9 @@ from database import (
     # Fix requests
     add_fix_request, get_fix_request, get_all_fix_requests, init_fix_requests_table, update_fix_request_status,
     # Migrations
-    add_sales_notes_column, add_contact_salesperson_column
+    add_sales_notes_column, add_contact_salesperson_column,
+    # App settings
+    init_app_settings_table
 )
 from pdf_generator import generate_quote_pdf
 from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RATE_PER_MILE
@@ -48,7 +50,7 @@ from analytics_ga import (
     fetch_phone_clicks,
     get_demo_traffic_data, get_demo_traffic_by_month,
     get_oauth_flow, save_oauth_token, save_oauth_secrets, get_oauth_secrets,
-    disconnect_ga, OAUTH_SECRETS_PATH,
+    disconnect_ga, migrate_ga_files_to_database,
     get_websites, get_website, add_website, remove_website, get_default_website
 )
 from email_integration import (
@@ -127,6 +129,8 @@ def format_date_filter(value, format='%Y-%m-%d'):
 # Initialize database on startup
 init_database()
 init_fix_requests_table()  # Create fix_requests table if not exists
+init_app_settings_table()  # Create app_settings table if not exists
+migrate_ga_files_to_database()  # Migrate GA credentials from files to database
 add_sales_notes_column()  # Add sales_notes column to contacts if not exists
 add_contact_salesperson_column()  # Add salesperson_id column to contacts if not exists
 

@@ -65,10 +65,16 @@ class PostgresCursorWrapper:
             query = query.replace('INSERT OR REPLACE INTO', 'INSERT INTO')
             query = query.rstrip() + ' ON CONFLICT (user_id, provider) DO UPDATE SET token_data = EXCLUDED.token_data, updated_at = EXCLUDED.updated_at'
 
+        # Convert INSERT OR REPLACE for app_settings table
+        elif 'INSERT OR REPLACE INTO app_settings' in query:
+            query = query.replace('INSERT OR REPLACE INTO', 'INSERT INTO')
+            query = query.rstrip() + ' ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = EXCLUDED.updated_at'
+
         # Add RETURNING id for INSERT statements to support lastrowid
         # But NOT for ON CONFLICT DO NOTHING (junction tables may not have id column)
+        # And NOT for tables without an id column (app_settings uses setting_key as PK)
         is_insert = query.strip().upper().startswith('INSERT') and 'RETURNING' not in query.upper()
-        needs_returning = is_insert and 'DO NOTHING' not in query.upper()
+        needs_returning = is_insert and 'DO NOTHING' not in query.upper() and 'app_settings' not in query
         if needs_returning:
             query = query.rstrip().rstrip(';') + ' RETURNING id'
 
@@ -3211,6 +3217,75 @@ def add_contact_salesperson_column():
         print(f"Note: salesperson_id column may already exist: {e}")
     finally:
         conn.close()
+
+
+# ============== App Settings (key-value store for OAuth, config, etc.) ==============
+
+def init_app_settings_table():
+    """Create app_settings table if it doesn't exist (works for both SQLite and PostgreSQL)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        if USE_POSTGRES:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    setting_key TEXT PRIMARY KEY,
+                    setting_value TEXT NOT NULL,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+        else:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    setting_key TEXT PRIMARY KEY,
+                    setting_value TEXT NOT NULL,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+        conn.commit()
+    except Exception as e:
+        print(f"Note: app_settings table may already exist: {e}")
+    finally:
+        conn.close()
+
+
+def save_app_setting(key, value):
+    """Save an app setting (stores dict/list as JSON)."""
+    import json
+    conn = get_connection()
+    cursor = conn.cursor()
+    value_json = json.dumps(value) if isinstance(value, (dict, list)) else value
+    cursor.execute("""
+        INSERT OR REPLACE INTO app_settings (setting_key, setting_value, updated_at)
+        VALUES (?, ?, ?)
+    """, (key, value_json, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+
+def get_app_setting(key):
+    """Get an app setting by key (returns parsed JSON or None)."""
+    import json
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT setting_value FROM app_settings WHERE setting_key = ?", (key,))
+    row = cursor.fetchone()
+    conn.close()
+    if row and row['setting_value']:
+        try:
+            return json.loads(row['setting_value'])
+        except (json.JSONDecodeError, TypeError):
+            return row['setting_value']
+    return None
+
+
+def delete_app_setting(key):
+    """Delete an app setting by key."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM app_settings WHERE setting_key = ?", (key,))
+    conn.commit()
+    conn.close()
 
 
 if __name__ == "__main__":

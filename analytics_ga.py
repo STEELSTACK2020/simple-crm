@@ -2,6 +2,7 @@
 Google Analytics 4 Integration Module
 Fetches website traffic data from GA4 for the Traffic Dashboard.
 Supports OAuth 2.0 "Login with Google" flow.
+Credentials are stored in the database to persist across Railway deploys.
 """
 
 import os
@@ -9,7 +10,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Configuration file paths
+# Legacy file paths (used for auto-migration to database)
 CONFIG_PATH = Path(__file__).parent / "ga_config.json"
 TOKEN_PATH = Path(__file__).parent / "ga_token.json"
 OAUTH_SECRETS_PATH = Path(__file__).parent / "oauth_secrets.json"
@@ -33,22 +34,33 @@ except ImportError:
     GA_AVAILABLE = False
 
 
+def _db_setting(key, value=None, delete=False):
+    """Helper to get/set/delete a database setting. Lazy import to avoid circular imports."""
+    from database import get_app_setting, save_app_setting, delete_app_setting
+    if delete:
+        delete_app_setting(key)
+        return None
+    if value is not None:
+        save_app_setting(key, value)
+        return value
+    return get_app_setting(key)
+
+
 def is_oauth_configured():
     """Check if OAuth client secrets are configured."""
-    return OAUTH_SECRETS_PATH.exists()
+    return _db_setting('ga_oauth_secrets') is not None
 
 
 def is_ga_connected():
     """Check if GA4 is connected (has valid token and property ID)."""
-    return TOKEN_PATH.exists() and CONFIG_PATH.exists()
+    return _db_setting('ga_oauth_token') is not None and _db_setting('ga_config') is not None
 
 
 def get_ga_config():
-    """Load GA configuration."""
-    if not CONFIG_PATH.exists():
+    """Load GA configuration from database."""
+    config = _db_setting('ga_config')
+    if not config:
         return None
-    with open(CONFIG_PATH, 'r') as f:
-        config = json.load(f)
 
     # Migrate old single-property format to new multi-website format
     if 'websites' not in config and 'property_id' in config:
@@ -67,9 +79,8 @@ def get_ga_config():
 
 
 def save_ga_config_raw(config):
-    """Save raw GA configuration."""
-    with open(CONFIG_PATH, 'w') as f:
-        json.dump(config, f, indent=2)
+    """Save raw GA configuration to database."""
+    _db_setting('ga_config', config)
     return config
 
 
@@ -176,15 +187,12 @@ def get_default_website():
 
 
 def get_oauth_secrets():
-    """Load OAuth client secrets."""
-    if not OAUTH_SECRETS_PATH.exists():
-        return None
-    with open(OAUTH_SECRETS_PATH, 'r') as f:
-        return json.load(f)
+    """Load OAuth client secrets from database."""
+    return _db_setting('ga_oauth_secrets')
 
 
 def save_oauth_secrets(client_id, client_secret):
-    """Save OAuth client secrets."""
+    """Save OAuth client secrets to database."""
     secrets = {
         'web': {
             'client_id': client_id,
@@ -194,8 +202,7 @@ def save_oauth_secrets(client_id, client_secret):
             'redirect_uris': ['http://localhost:5000/traffic/oauth/callback']
         }
     }
-    with open(OAUTH_SECRETS_PATH, 'w') as f:
-        json.dump(secrets, f, indent=2)
+    _db_setting('ga_oauth_secrets', secrets)
     return secrets
 
 
@@ -204,8 +211,12 @@ def get_oauth_flow(redirect_uri='http://localhost:5000/traffic/oauth/callback'):
     if not GA_AVAILABLE or not is_oauth_configured():
         return None
 
-    flow = Flow.from_client_secrets_file(
-        str(OAUTH_SECRETS_PATH),
+    secrets = get_oauth_secrets()
+    if not secrets:
+        return None
+
+    flow = Flow.from_client_config(
+        secrets,
         scopes=SCOPES,
         redirect_uri=redirect_uri
     )
@@ -213,7 +224,7 @@ def get_oauth_flow(redirect_uri='http://localhost:5000/traffic/oauth/callback'):
 
 
 def save_oauth_token(credentials):
-    """Save OAuth token from credentials."""
+    """Save OAuth token to database."""
     token_data = {
         'token': credentials.token,
         'refresh_token': credentials.refresh_token,
@@ -223,17 +234,14 @@ def save_oauth_token(credentials):
         'scopes': list(credentials.scopes),
         'saved_at': datetime.now().isoformat()
     }
-    with open(TOKEN_PATH, 'w') as f:
-        json.dump(token_data, f, indent=2)
+    _db_setting('ga_oauth_token', token_data)
 
 
 def get_credentials():
-    """Get OAuth credentials from saved token."""
-    if not TOKEN_PATH.exists():
+    """Get OAuth credentials from database."""
+    token_data = _db_setting('ga_oauth_token')
+    if not token_data:
         return None
-
-    with open(TOKEN_PATH, 'r') as f:
-        token_data = json.load(f)
 
     credentials = Credentials(
         token=token_data.get('token'),
@@ -269,11 +277,50 @@ def get_ga_client():
 
 
 def disconnect_ga():
-    """Disconnect GA4 (remove tokens and config)."""
-    if TOKEN_PATH.exists():
-        os.remove(TOKEN_PATH)
-    if CONFIG_PATH.exists():
-        os.remove(CONFIG_PATH)
+    """Disconnect GA4 (remove tokens and config from database)."""
+    _db_setting('ga_oauth_token', delete=True)
+    _db_setting('ga_config', delete=True)
+
+
+def migrate_ga_files_to_database():
+    """One-time migration: move GA credentials from JSON files to database."""
+    migrated = False
+
+    # Migrate OAuth secrets
+    if OAUTH_SECRETS_PATH.exists() and not _db_setting('ga_oauth_secrets'):
+        try:
+            with open(OAUTH_SECRETS_PATH, 'r') as f:
+                secrets = json.load(f)
+            _db_setting('ga_oauth_secrets', secrets)
+            print("[GA Migration] Migrated oauth_secrets.json to database")
+            migrated = True
+        except Exception as e:
+            print(f"[GA Migration] Error migrating oauth_secrets: {e}")
+
+    # Migrate token
+    if TOKEN_PATH.exists() and not _db_setting('ga_oauth_token'):
+        try:
+            with open(TOKEN_PATH, 'r') as f:
+                token = json.load(f)
+            _db_setting('ga_oauth_token', token)
+            print("[GA Migration] Migrated ga_token.json to database")
+            migrated = True
+        except Exception as e:
+            print(f"[GA Migration] Error migrating ga_token: {e}")
+
+    # Migrate config
+    if CONFIG_PATH.exists() and not _db_setting('ga_config'):
+        try:
+            with open(CONFIG_PATH, 'r') as f:
+                config = json.load(f)
+            _db_setting('ga_config', config)
+            print("[GA Migration] Migrated ga_config.json to database")
+            migrated = True
+        except Exception as e:
+            print(f"[GA Migration] Error migrating ga_config: {e}")
+
+    if not migrated:
+        print("[GA Migration] No files to migrate (already in database or no files found)")
 
 
 def fetch_traffic_by_channel(start_date=None, end_date=None, website_id=None):
