@@ -17,6 +17,10 @@
                 <p class="text-slate-200 mt-1">{{ contact.email }}</p>
             </div>
             <div class="flex space-x-3">
+                <button type="submit"
+                   class="bg-green-500 text-white hover:bg-green-600 px-4 py-2 rounded-lg font-medium text-sm">
+                    Save Changes
+                </button>
             </div>
         </div>
 
@@ -169,13 +173,6 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Sales Notes</h3>
             <textarea name="sales_notes" rows="4" placeholder="Add internal sales notes about this contact..."
                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50">{{ contact.sales_notes or '' }}</textarea>
-        </div>
-
-        <!-- Save Button (bottom) -->
-        <div class="mt-6 pt-4 border-t flex justify-end">
-            <button type="submit" class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium text-sm">
-                Save Changes
-            </button>
         </div>
 
         <!-- Associated Deals -->
