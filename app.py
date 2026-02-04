@@ -378,14 +378,6 @@ def contact_detail(contact_id):
         salesperson_id = request.form.get('salesperson_id')
         salesperson_id = int(salesperson_id) if salesperson_id else None
 
-        # Auto-assign: if no salesperson selected and contact was unassigned, use logged-in user's salesperson
-        if not salesperson_id and not contact.get('salesperson_id'):
-            user_id = session.get('user_id')
-            sp = get_salesperson_for_user(user_id)
-            if sp:
-                salesperson_id = sp['id']
-                print(f"Auto-assigned salesperson '{sp['name']}' to contact '{contact['first_name']} {contact['last_name']}'")
-
         update_data = {
             'first_name': request.form.get('first_name'),
             'last_name': request.form.get('last_name'),
@@ -430,14 +422,6 @@ def contact_edit(contact_id):
         # Get salesperson_id
         salesperson_id = request.form.get('salesperson_id')
         salesperson_id = int(salesperson_id) if salesperson_id else None
-
-        # Auto-assign: if no salesperson selected and contact was unassigned, use logged-in user's salesperson
-        if not salesperson_id and not contact.get('salesperson_id'):
-            user_id = session.get('user_id')
-            sp = get_salesperson_for_user(user_id)
-            if sp:
-                salesperson_id = sp['id']
-                print(f"Auto-assigned salesperson '{sp['name']}' to contact '{contact['first_name']} {contact['last_name']}'")
 
         # Update contact with form data
         update_data = {
