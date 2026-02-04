@@ -2913,7 +2913,7 @@ def get_all_users():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, username, email, first_name, last_name, role, is_active, last_login, created_at
+        SELECT id, username, email, first_name, last_name, role, is_active, last_login, created_at, salesperson_id
         FROM users
         ORDER BY created_at DESC
     """)
