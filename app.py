@@ -979,12 +979,13 @@ def api_get_emails(email_address):
 @login_required
 def api_get_email_body(source, email_id):
     """Fetch the full body of a single email by source (gmail/outlook) and ID."""
-    user_id = session.get('user_id')
+    # Use the owner's user_id if provided (for cross-user email viewing), otherwise fall back to logged-in user
+    owner_user_id = request.args.get('uid', session.get('user_id'), type=int)
 
     if source == 'gmail':
-        result = get_gmail_email_body(user_id, email_id)
+        result = get_gmail_email_body(owner_user_id, email_id)
     elif source == 'outlook':
-        result = get_outlook_email_body(user_id, email_id)
+        result = get_outlook_email_body(owner_user_id, email_id)
     else:
         return jsonify({"success": False, "error": "Invalid email source"}), 400
 

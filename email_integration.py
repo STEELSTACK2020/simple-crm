@@ -696,6 +696,7 @@ def fetch_emails_for_contact_all_users(email_address, max_results=30):
                 if dedup_key not in seen_ids:
                     seen_ids.add(dedup_key)
                     email['fetched_via'] = user_label
+                    email['fetched_by_user_id'] = uid
                     all_emails.append(email)
         if result.get('errors'):
             for err in result['errors']:

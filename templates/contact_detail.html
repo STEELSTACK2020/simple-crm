@@ -249,7 +249,7 @@
             </div>
 
             <script>
-                function openEmailModal(source, emailId, subject) {
+                function openEmailModal(source, emailId, subject, ownerUid) {
                     const modal = document.getElementById('email-modal');
                     const bodyContainer = document.getElementById('modal-body');
 
@@ -260,7 +260,8 @@
                     document.getElementById('modal-date').textContent = '';
                     bodyContainer.innerHTML = '<div class="text-center py-4 text-gray-500"><span class="animate-pulse">Loading email...</span></div>';
 
-                    fetch(`/api/emails/${source}/${emailId}`)
+                    const uidParam = ownerUid ? `?uid=${ownerUid}` : '';
+                    fetch(`/api/emails/${source}/${emailId}${uidParam}`)
                         .then(response => response.json())
                         .then(data => {
                             if (data.success && data.email) {
@@ -308,7 +309,7 @@
                                 const escapedSubject = email.subject.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                                 html += `
                                     <div class="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 border border-gray-200 cursor-pointer transition-colors"
-                                         onclick="openEmailModal('${email.source}', '${email.id}', '${escapedSubject}')">
+                                         onclick="openEmailModal('${email.source}', '${email.id}', '${escapedSubject}', ${email.fetched_by_user_id || 'null'})">
                                         <div class="flex justify-between items-start">
                                             <div class="flex-1 min-w-0">
                                                 <p class="text-sm font-medium text-gray-900 truncate">${source} ${email.subject}</p>
