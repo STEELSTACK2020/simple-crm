@@ -27,6 +27,54 @@
     </div>
 </div>
 
+<!-- Leads Needing Attention Widget -->
+{% if untouched_leads %}
+<div class="bg-white rounded-lg shadow overflow-hidden mb-8 border-l-4 border-red-500">
+    <div class="px-6 py-4 border-b bg-red-50 flex justify-between items-center">
+        <div>
+            <h3 class="text-lg font-semibold text-red-800">Leads Needing Attention</h3>
+            <p class="text-sm text-red-600">No emails sent, no notes added - these leads need follow-up!</p>
+        </div>
+        <span class="bg-red-600 text-white text-lg font-bold px-3 py-1 rounded-full">{{ untouched_leads|length }}</span>
+    </div>
+    <div class="max-h-64 overflow-y-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 sticky top-0">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Added</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for lead in untouched_leads %}
+                <tr class="hover:bg-red-50">
+                    <td class="px-4 py-3">
+                        <a href="/contacts/{{ lead.id }}" class="text-sm font-medium text-gray-900 hover:text-red-600">
+                            {{ lead.first_name }} {{ lead.last_name }}
+                        </a>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.email }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.phone or '-' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.created_at|format_date if lead.created_at else '-' }}</td>
+                    <td class="px-4 py-3">
+                        <a href="/contacts/{{ lead.id }}" class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">
+                            Follow Up
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="px-6 py-3 bg-gray-50 border-t">
+        <a href="/contacts" class="text-sm text-red-600 hover:text-red-800 font-medium">View all contacts →</a>
+    </div>
+</div>
+{% endif %}
+
 <!-- Date Filter Controls -->
 <div class="bg-white rounded-lg shadow p-4 mb-8">
     <div class="flex flex-wrap items-center gap-4">
@@ -216,54 +264,6 @@ function applyMonthFilter() {
     </div>
 </div>
 
-<!-- Leads Needing Attention Widget -->
-{% if untouched_leads %}
-<div class="bg-white rounded-lg shadow overflow-hidden mb-8 border-l-4 border-red-500">
-    <div class="px-6 py-4 border-b bg-red-50 flex justify-between items-center">
-        <div>
-            <h3 class="text-lg font-semibold text-red-800">Leads Needing Attention</h3>
-            <p class="text-sm text-red-600">No emails sent, no notes added - these leads need follow-up!</p>
-        </div>
-        <span class="bg-red-600 text-white text-lg font-bold px-3 py-1 rounded-full">{{ untouched_leads|length }}</span>
-    </div>
-    <div class="max-h-64 overflow-y-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50 sticky top-0">
-                <tr>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Added</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                {% for lead in untouched_leads %}
-                <tr class="hover:bg-red-50">
-                    <td class="px-4 py-3">
-                        <a href="/contacts/{{ lead.id }}" class="text-sm font-medium text-gray-900 hover:text-red-600">
-                            {{ lead.first_name }} {{ lead.last_name }}
-                        </a>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.email }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.phone or '-' }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.created_at|format_date if lead.created_at else '-' }}</td>
-                    <td class="px-4 py-3">
-                        <a href="/contacts/{{ lead.id }}" class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">
-                            Follow Up
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="px-6 py-3 bg-gray-50 border-t">
-        <a href="/contacts" class="text-sm text-red-600 hover:text-red-800 font-medium">View all contacts →</a>
-    </div>
-</div>
-{% endif %}
-
 <!-- Year-over-Year Comparison -->
 {% if comparison.by_year %}
 <div class="bg-white rounded-lg shadow p-6 mb-8">
@@ -421,32 +421,75 @@ function applyMonthFilter() {
     </div>
 </div>
 
-<!-- Revenue by Salesperson -->
+<!-- Sales Leaderboard -->
 {% if analytics.by_salesperson %}
+{% set max_revenue = analytics.by_salesperson|map(attribute='revenue')|max %}
 <div class="bg-white rounded-lg shadow overflow-hidden mb-8">
-    <div class="px-6 py-4 border-b">
-        <h3 class="text-lg font-semibold text-gray-900">Revenue by Salesperson</h3>
+    <div class="px-6 py-5 border-b bg-gradient-to-r from-slate-800 to-slate-700">
+        <div class="flex justify-between items-center">
+            <div>
+                <h3 class="text-xl font-bold text-white">Sales Leaderboard</h3>
+                <p class="text-sm text-slate-300 mt-1">Who's bringing in the big bucks?</p>
+            </div>
+            <span class="text-3xl">&#127942;</span>
+        </div>
     </div>
-    <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-            <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salesperson</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deals Won</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Deal</th>
-            </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-            {% for sp in analytics.by_salesperson %}
-            <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sp.salesperson }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ sp.count }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">${{ "{:,.0f}".format(sp.revenue) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ "{:,.0f}".format(sp.revenue / sp.count) if sp.count > 0 else '0' }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="p-6 space-y-4">
+        {% for sp in analytics.by_salesperson %}
+        {% set rank = loop.index %}
+        {% set pct = (sp.revenue / max_revenue * 100) if max_revenue > 0 else 0 %}
+        <div class="relative {{ 'bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-xl p-5' if rank == 1 else 'bg-gray-50 rounded-xl p-4 border border-gray-200' }}">
+            <div class="flex items-center gap-4">
+                <!-- Rank Badge -->
+                <div class="flex-shrink-0">
+                    {% if rank == 1 %}
+                    <div class="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg">
+                        <span class="text-2xl">&#129351;</span>
+                    </div>
+                    {% elif rank == 2 %}
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center shadow">
+                        <span class="text-xl">&#129352;</span>
+                    </div>
+                    {% elif rank == 3 %}
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-orange-300 to-orange-400 flex items-center justify-center shadow">
+                        <span class="text-xl">&#129353;</span>
+                    </div>
+                    {% else %}
+                    <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                        <span class="text-lg font-bold text-gray-500">#{{ rank }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Name & Stats -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="{{ 'text-xl font-bold text-gray-900' if rank == 1 else 'text-lg font-semibold text-gray-800' }}">
+                                {{ sp.salesperson }}
+                                {% if rank == 1 %}<span class="ml-1 text-sm">&#128293;</span>{% endif %}
+                            </h4>
+                            <div class="flex gap-4 mt-1">
+                                <span class="text-sm text-gray-500">{{ sp.count }} deal{{ 's' if sp.count != 1 else '' }} won</span>
+                                <span class="text-sm text-gray-500">Avg: ${{ "{:,.0f}".format(sp.revenue / sp.count) if sp.count > 0 else '0' }}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="{{ 'text-2xl font-bold text-green-600' if rank == 1 else 'text-xl font-bold text-green-600' }}">
+                                ${{ "{:,.0f}".format(sp.revenue) }}
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Revenue Bar -->
+                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div class="h-3 rounded-full transition-all duration-500 {{ 'bg-gradient-to-r from-yellow-400 to-green-500' if rank == 1 else 'bg-gradient-to-r from-slate-400 to-green-500' if rank == 2 else 'bg-gradient-to-r from-slate-300 to-green-400' }}"
+                             style="width: {{ pct }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 {% endif %}
 
@@ -538,51 +581,6 @@ function applyMonthFilter() {
             </table>
         </div>
     </div>
-</div>
-
-<!-- Recent Contacts -->
-<div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="px-6 py-4 border-b flex justify-between items-center">
-        <h3 class="text-lg font-semibold text-gray-900">Recent Contacts</h3>
-        <a href="/contacts" class="text-slate-800 hover:text-purple-800 text-sm font-medium">View All</a>
-    </div>
-    <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-            <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deal Value</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-            </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-            {% for contact in analytics.recent_contacts %}
-            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='/contacts/{{ contact.id }}'">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">{{ contact.first_name }} {{ contact.last_name }}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ contact.email }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    {% if contact.deal_value > 0 %}
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        ${{ "{:,.2f}".format(contact.deal_value) }}
-                    </span>
-                    {% else %}
-                    <span class="text-sm text-gray-400">-</span>
-                    {% endif %}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ contact.created_at|format_date if contact.created_at else '-' }}</td>
-            </tr>
-            {% endfor %}
-            {% if not analytics.recent_contacts %}
-            <tr>
-                <td colspan="4" class="px-6 py-8 text-center text-gray-500">
-                    No contacts yet. <a href="/contacts/add" class="text-slate-800 hover:underline">Add your first contact</a>
-                </td>
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
 </div>
 
 <!-- Deals Modal -->
