@@ -40,6 +40,7 @@ from database import (
     # Migrations
     add_sales_notes_column, add_contact_salesperson_column,
     add_user_salesperson_column, get_salesperson_for_user,
+    get_users_with_email_connected,
     # App settings
     init_app_settings_table
 )
@@ -59,7 +60,8 @@ from email_integration import (
     get_gmail_auth_url, gmail_oauth_callback, disconnect_gmail,
     is_outlook_configured, is_outlook_connected, save_outlook_config,
     get_outlook_auth_url, outlook_oauth_callback, disconnect_outlook,
-    fetch_emails_for_contact, get_gmail_email_body, get_outlook_email_body
+    fetch_emails_for_contact, fetch_emails_for_contact_all_users,
+    get_gmail_email_body, get_outlook_email_body
 )
 
 app = Flask(__name__)
@@ -401,7 +403,8 @@ def contact_detail(contact_id):
 
     deals = get_deals_for_contact(contact_id)
     user_id = session.get('user_id')
-    email_connected = is_gmail_connected(user_id) or is_outlook_connected(user_id)
+    # Show email section if ANY user has email connected
+    email_connected = is_gmail_connected(user_id) or is_outlook_connected(user_id) or len(get_users_with_email_connected()) > 0
     return render_template('contact_detail.html', contact=contact, deals=deals, email_connected=email_connected,
                           companies=get_all_companies(), salespeople=get_salespeople(), mediums=get_utm_mediums())
 
@@ -956,7 +959,7 @@ def outlook_disconnect_route():
 @app.route('/api/emails/<email_address>')
 @login_required
 def api_get_emails(email_address):
-    """Fetch emails for a contact's email address using logged-in user's email connection."""
+    """Fetch emails for a contact from all connected users' email accounts."""
     user_id = session.get('user_id')
     max_results = request.args.get('max_results', 20, type=int)
 
@@ -968,7 +971,7 @@ def api_get_emails(email_address):
             update_contact(contact['id'], salesperson_id=sp['id'])
             print(f"Auto-assigned salesperson '{sp['name']}' to contact '{contact['first_name']} {contact['last_name']}'")
 
-    result = fetch_emails_for_contact(user_id, email_address, max_results=max_results)
+    result = fetch_emails_for_contact_all_users(email_address, max_results=max_results)
     return jsonify(result)
 
 

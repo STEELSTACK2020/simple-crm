@@ -314,7 +314,10 @@
                                                 <p class="text-sm font-medium text-gray-900 truncate">${source} ${email.subject}</p>
                                                 <p class="text-xs text-gray-500 mt-1 truncate">From: ${email.from}</p>
                                             </div>
-                                            <span class="text-xs text-gray-400 ml-2 whitespace-nowrap">${date}</span>
+                                            <div class="text-right ml-2">
+                                                <span class="text-xs text-gray-400 whitespace-nowrap">${date}</span>
+                                                ${email.fetched_via ? '<p class="text-xs text-blue-500 mt-0.5">' + email.fetched_via + '</p>' : ''}
+                                            </div>
                                         </div>
                                         <p class="text-xs text-gray-600 mt-2 line-clamp-2">${email.snippet}</p>
                                     </div>

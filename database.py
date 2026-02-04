@@ -2984,6 +2984,21 @@ def delete_user_email_token(user_id, provider):
     return {"success": deleted > 0}
 
 
+def get_users_with_email_connected():
+    """Get all user IDs that have email tokens stored."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT DISTINCT t.user_id, u.first_name, u.last_name, u.username
+        FROM user_email_tokens t
+        JOIN users u ON u.id = t.user_id
+        WHERE u.is_active = 1
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
 def get_user_email_status(user_id):
     """Get email connection status for a user."""
     conn = get_connection()

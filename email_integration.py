@@ -13,7 +13,8 @@ from datetime import datetime, timedelta
 from database import (
     save_user_email_token, get_user_email_token,
     delete_user_email_token, get_user_email_status,
-    get_contact_by_email, update_contact_activity
+    get_contact_by_email, update_contact_activity,
+    get_users_with_email_connected
 )
 
 # Config paths (app-level credentials, shared across all users)
@@ -667,4 +668,55 @@ def fetch_emails_for_contact(user_id, email_address, max_results=20):
             'gmail': is_gmail_connected(user_id),
             'outlook': is_outlook_connected(user_id)
         }
+    }
+
+
+def fetch_emails_for_contact_all_users(email_address, max_results=30):
+    """
+    Fetch emails for a contact from ALL users with email connected.
+    Merges, deduplicates, and sorts by date.
+    """
+    connected_users = get_users_with_email_connected()
+    if not connected_users:
+        return {'success': False, 'emails': [], 'error': 'No users have email connected'}
+
+    all_emails = []
+    errors = []
+    seen_ids = set()
+
+    for user in connected_users:
+        uid = user['user_id']
+        user_label = f"{user.get('first_name') or ''} {user.get('last_name') or ''}".strip() or user.get('username', '')
+
+        result = fetch_emails_for_contact(uid, email_address, max_results=max_results)
+        if result.get('success') and result.get('emails'):
+            for email in result['emails']:
+                # Deduplicate by message id + subject + date combo
+                dedup_key = f"{email.get('id', '')}_{email.get('source', '')}"
+                if dedup_key not in seen_ids:
+                    seen_ids.add(dedup_key)
+                    email['fetched_via'] = user_label
+                    all_emails.append(email)
+        if result.get('errors'):
+            for err in result['errors']:
+                errors.append(f"{user_label}: {err}")
+
+    # Sort by date newest first
+    try:
+        all_emails.sort(key=lambda x: x.get('date', ''), reverse=True)
+    except:
+        pass
+
+    # Update last_activity_date if emails were sent TO the contact
+    if all_emails:
+        sent_to_contact = [e for e in all_emails if email_address.lower() in e.get('to', '').lower()]
+        if sent_to_contact:
+            contact = get_contact_by_email(email_address)
+            if contact:
+                update_contact_activity(contact['id'])
+
+    return {
+        'success': len(all_emails) > 0,
+        'emails': all_emails[:max_results],
+        'errors': errors if errors else None
     }
