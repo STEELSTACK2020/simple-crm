@@ -39,6 +39,7 @@ from database import (
     add_fix_request, get_fix_request, get_all_fix_requests, init_fix_requests_table, update_fix_request_status,
     # Migrations
     add_sales_notes_column, add_contact_salesperson_column,
+    add_user_salesperson_column, get_salesperson_for_user,
     # App settings
     init_app_settings_table
 )
@@ -133,6 +134,7 @@ init_app_settings_table()  # Create app_settings table if not exists
 migrate_ga_files_to_database()  # Migrate GA credentials from files to database
 add_sales_notes_column()  # Add sales_notes column to contacts if not exists
 add_contact_salesperson_column()  # Add salesperson_id column to contacts if not exists
+add_user_salesperson_column()  # Add salesperson_id column to users for salesperson linking
 
 
 # ============== Authentication ==============
@@ -957,6 +959,15 @@ def api_get_emails(email_address):
     """Fetch emails for a contact's email address using logged-in user's email connection."""
     user_id = session.get('user_id')
     max_results = request.args.get('max_results', 20, type=int)
+
+    # Auto-assign salesperson: if contact has no salesperson and user is linked to one
+    contact = get_contact_by_email(email_address)
+    if contact and not contact.get('salesperson_id'):
+        sp = get_salesperson_for_user(user_id)
+        if sp:
+            update_contact(contact['id'], salesperson_id=sp['id'])
+            print(f"Auto-assigned salesperson '{sp['name']}' to contact '{contact['first_name']} {contact['last_name']}'")
+
     result = fetch_emails_for_contact(user_id, email_address, max_results=max_results)
     return jsonify(result)
 
@@ -1002,20 +1013,24 @@ def user_add():
         role = request.form.get('role', 'salesperson')
 
         if not username or not password:
-            return render_template('user_form.html', error="Username and password are required", user=None)
+            return render_template('user_form.html', error="Username and password are required", user=None, salespeople=get_salespeople())
 
         if len(password) < 6:
-            return render_template('user_form.html', error="Password must be at least 6 characters", user=None)
+            return render_template('user_form.html', error="Password must be at least 6 characters", user=None, salespeople=get_salespeople())
 
         result = add_user(username, password, email=email, first_name=first_name,
                          last_name=last_name, role=role)
 
         if result['success']:
+            # Link to salesperson if selected
+            salesperson_id = request.form.get('salesperson_id')
+            if salesperson_id:
+                update_user(result['id'], salesperson_id=int(salesperson_id))
             return redirect(url_for('user_management'))
         else:
-            return render_template('user_form.html', error=result['error'], user=None)
+            return render_template('user_form.html', error=result['error'], user=None, salespeople=get_salespeople())
 
-    return render_template('user_form.html', user=None)
+    return render_template('user_form.html', user=None, salespeople=get_salespeople())
 
 
 @app.route('/settings/users/<int:user_id>/edit', methods=['GET', 'POST'])
@@ -1035,23 +1050,27 @@ def user_edit(user_id):
         is_active = request.form.get('is_active') == 'on'
         new_password = request.form.get('password', '').strip()
 
+        salesperson_id = request.form.get('salesperson_id')
+        salesperson_id = int(salesperson_id) if salesperson_id else None
+
         update_data = {
             'email': email or None,
             'first_name': first_name or None,
             'last_name': last_name or None,
             'role': role,
-            'is_active': 1 if is_active else 0
+            'is_active': 1 if is_active else 0,
+            'salesperson_id': salesperson_id
         }
 
         if new_password:
             if len(new_password) < 6:
-                return render_template('user_form.html', error="Password must be at least 6 characters", user=user)
+                return render_template('user_form.html', error="Password must be at least 6 characters", user=user, salespeople=get_salespeople())
             update_data['password'] = new_password
 
         update_user(user_id, **update_data)
         return redirect(url_for('user_management'))
 
-    return render_template('user_form.html', user=user)
+    return render_template('user_form.html', user=user, salespeople=get_salespeople())
 
 
 @app.route('/settings/users/<int:user_id>/delete', methods=['POST'])

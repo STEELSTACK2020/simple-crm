@@ -2867,7 +2867,7 @@ def update_user(user_id, **kwargs):
     conn = get_connection()
     cursor = conn.cursor()
 
-    allowed_fields = ['email', 'first_name', 'last_name', 'role', 'is_active']
+    allowed_fields = ['email', 'first_name', 'last_name', 'role', 'is_active', 'salesperson_id']
     updates = []
     values = []
 
@@ -3187,6 +3187,48 @@ def add_sales_notes_column():
         print(f"Note: sales_notes column may already exist: {e}")
     finally:
         conn.close()
+
+
+def add_user_salesperson_column():
+    """Add salesperson_id column to users table to link users to salespeople."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        if USE_POSTGRES:
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'salesperson_id'
+            """)
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN salesperson_id INTEGER REFERENCES salespeople(id) ON DELETE SET NULL")
+                conn.commit()
+                print("Added salesperson_id column to users table")
+        else:
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN salesperson_id INTEGER REFERENCES salespeople(id)")
+                conn.commit()
+                print("Added salesperson_id column to users table")
+            except:
+                pass  # Column already exists
+    except Exception as e:
+        print(f"Note: users.salesperson_id column may already exist: {e}")
+    finally:
+        conn.close()
+
+
+def get_salesperson_for_user(user_id):
+    """Get the salesperson record linked to a user, or None."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT s.* FROM salespeople s
+        JOIN users u ON u.salesperson_id = s.id
+        WHERE u.id = ?
+    """, (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 def add_contact_salesperson_column():
