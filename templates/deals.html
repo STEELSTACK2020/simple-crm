@@ -35,15 +35,23 @@
                 <option value="negotiation" {{ 'selected' if current_stage == 'negotiation' else '' }}>Negotiation</option>
             </select>
         </div>
-        <div class="flex items-center gap-2">
-            <label class="text-sm font-medium text-gray-700">From:</label>
-            <input type="date" id="date-from" value="{{ date_from or '' }}" onchange="applyFilters()"
-                   class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
-        </div>
-        <div class="flex items-center gap-2">
-            <label class="text-sm font-medium text-gray-700">To:</label>
-            <input type="date" id="date-to" value="{{ date_to or '' }}" onchange="applyFilters()"
-                   class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+        <div class="flex items-center gap-1">
+            <button onclick="shiftMonth(-1)" title="Previous month"
+                    class="px-2 py-1.5 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-bold">&larr;</button>
+            <div class="flex items-center gap-1">
+                <label class="text-sm font-medium text-gray-700">From:</label>
+                <input type="date" id="date-from" value="{{ date_from or '' }}" onchange="applyFilters()"
+                       class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+            </div>
+            <div class="flex items-center gap-1">
+                <label class="text-sm font-medium text-gray-700">To:</label>
+                <input type="date" id="date-to" value="{{ date_to or '' }}" onchange="applyFilters()"
+                       class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+            </div>
+            <button onclick="shiftMonth(1)" title="Next month"
+                    class="px-2 py-1.5 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-bold">&rarr;</button>
+            <button onclick="goToMonth(0)" title="This month"
+                    class="px-2 py-1.5 text-xs text-slate-700 hover:bg-slate-200 rounded-lg font-medium border border-gray-300">This Month</button>
         </div>
         {% if current_salesperson or current_stage or search_query or date_from or date_to %}
         <button onclick="clearAllFilters()" class="text-sm text-red-600 hover:text-red-800 underline font-medium">Clear All</button>
@@ -103,6 +111,34 @@ function clearAllFilters() {
     document.getElementById('date-to').value = '';
     // Navigate to clean URL
     window.location.href = '/deals';
+}
+
+function goToMonth(offset) {
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const first = target.toISOString().split('T')[0];
+    const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).toISOString().split('T')[0];
+    document.getElementById('date-from').value = first;
+    document.getElementById('date-to').value = last;
+    applyFilters();
+}
+
+function shiftMonth(direction) {
+    const fromEl = document.getElementById('date-from');
+    const toEl = document.getElementById('date-to');
+    let base;
+    if (fromEl.value) {
+        base = new Date(fromEl.value + 'T00:00:00');
+    } else {
+        base = new Date();
+        base.setDate(1);
+    }
+    const target = new Date(base.getFullYear(), base.getMonth() + direction, 1);
+    const first = target.toISOString().split('T')[0];
+    const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).toISOString().split('T')[0];
+    fromEl.value = first;
+    toEl.value = last;
+    applyFilters();
 }
 
 function applyFilters() {
