@@ -749,6 +749,28 @@ def get_contacts_count():
     return result['count'] if result else 0
 
 
+def get_contacts_by_date_range(from_date, to_date):
+    """Get contacts created within a date range. Returns first_name, last_name, email."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    # Add a day to to_date so it includes contacts created on that day
+    if USE_POSTGRES:
+        cursor.execute("""
+            SELECT first_name, last_name, email FROM contacts
+            WHERE created_at >= %s AND created_at < %s
+            ORDER BY created_at DESC
+        """, (from_date, to_date))
+    else:
+        cursor.execute("""
+            SELECT first_name, last_name, email FROM contacts
+            WHERE created_at >= ? AND created_at < ?
+            ORDER BY created_at DESC
+        """, (from_date, to_date))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
 def search_contacts(query):
     """Search contacts by name or email. Supports full name search (e.g. 'Chris Vistage')."""
     conn = get_connection()

@@ -12,7 +12,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 from database import (
     init_database, add_contact, update_contact, get_contact, get_contact_by_email,
-    get_all_contacts, search_contacts, delete_contact, get_contacts_count,
+    get_all_contacts, search_contacts, delete_contact, get_contacts_count, get_contacts_by_date_range,
     get_analytics, set_deal_value, get_year_comparison,
     get_leads_by_month_medium, get_deals_for_contact,
     update_contact_activity, get_untouched_leads,
@@ -627,6 +627,40 @@ def import_contacts():
 
     except Exception as e:
         return redirect(url_for('contacts_list') + f'?error=Import+failed:+{str(e)[:50]}')
+
+
+@app.route('/contacts/export')
+@login_required
+def export_contacts():
+    """Export contacts as CSV filtered by date range."""
+    import csv
+    import io
+
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+
+    if not from_date or not to_date:
+        return redirect(url_for('contacts_list') + '?error=Please+select+both+dates')
+
+    # Add one day to to_date so the range is inclusive
+    try:
+        to_date_inclusive = (datetime.strptime(to_date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+    except ValueError:
+        return redirect(url_for('contacts_list') + '?error=Invalid+date+format')
+
+    contacts = get_contacts_by_date_range(from_date, to_date_inclusive)
+
+    # Build CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['first_name', 'last_name', 'email'])
+    for c in contacts:
+        writer.writerow([c.get('first_name', ''), c.get('last_name', ''), c.get('email', '')])
+
+    # Send as downloadable file
+    csv_bytes = io.BytesIO(output.getvalue().encode('utf-8'))
+    filename = f"contacts_export_{from_date}_to_{to_date}.csv"
+    return send_file(csv_bytes, mimetype='text/csv', as_attachment=True, download_name=filename)
 
 
 # ============== Traffic Dashboard Routes ==============
