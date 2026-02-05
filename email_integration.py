@@ -502,6 +502,7 @@ def disconnect_outlook(user_id):
 def fetch_outlook_emails(user_id, email_address, max_results=20):
     """
     Fetch emails to/from a specific email address from Outlook.
+    Searches both inbox and sent items folders.
     Returns list of email summaries (not stored in DB).
     """
     import requests
@@ -516,38 +517,43 @@ def fetch_outlook_emails(user_id, email_address, max_results=20):
             'Content-Type': 'application/json'
         }
 
-        # Use $search without $orderby (they can't be combined in Graph API)
-        # The search will look in from, to, subject, and body
-        search_url = f"https://graph.microsoft.com/v1.0/me/messages?$search=\"{email_address}\"&$top={max_results}"
+        all_messages = []
+        seen_ids = set()
 
-        response = requests.get(search_url, headers=headers)
+        # Search both inbox and sent items
+        folders = ['inbox', 'sentitems']
+        for folder in folders:
+            search_url = f"https://graph.microsoft.com/v1.0/me/mailFolders/{folder}/messages?$search=\"{email_address}\"&$top={max_results}"
+            response = requests.get(search_url, headers=headers)
 
-        if response.status_code == 200:
-            data = response.json()
-            messages = data.get('value', [])
+            if response.status_code == 200:
+                data = response.json()
+                for msg in data.get('value', []):
+                    msg_id = msg.get('id')
+                    if msg_id not in seen_ids:
+                        seen_ids.add(msg_id)
+                        all_messages.append(msg)
 
-            emails = []
-            for msg in messages:
-                from_email = msg.get('from', {}).get('emailAddress', {})
-                to_emails = msg.get('toRecipients', [])
-                to_str = ', '.join([r.get('emailAddress', {}).get('address', '') for r in to_emails])
+        emails = []
+        for msg in all_messages:
+            from_email = msg.get('from', {}).get('emailAddress', {})
+            to_emails = msg.get('toRecipients', [])
+            to_str = ', '.join([r.get('emailAddress', {}).get('address', '') for r in to_emails])
 
-                emails.append({
-                    'id': msg.get('id'),
-                    'from': f"{from_email.get('name', '')} <{from_email.get('address', '')}>",
-                    'to': to_str,
-                    'subject': msg.get('subject', '(No Subject)'),
-                    'date': msg.get('receivedDateTime', ''),
-                    'snippet': msg.get('bodyPreview', '')[:200],
-                    'source': 'outlook'
-                })
+            emails.append({
+                'id': msg.get('id'),
+                'from': f"{from_email.get('name', '')} <{from_email.get('address', '')}>",
+                'to': to_str,
+                'subject': msg.get('subject', '(No Subject)'),
+                'date': msg.get('receivedDateTime', msg.get('sentDateTime', '')),
+                'snippet': msg.get('bodyPreview', '')[:200],
+                'source': 'outlook'
+            })
 
-            # Sort by date (newest first) since we can't use $orderby with $search
-            emails.sort(key=lambda x: x.get('date', ''), reverse=True)
+        # Sort by date (newest first)
+        emails.sort(key=lambda x: x.get('date', ''), reverse=True)
 
-            return {"success": True, "emails": emails}
-        else:
-            return {"success": False, "error": f"API error: {response.status_code}"}
+        return {"success": True, "emails": emails[:max_results]}
 
     except Exception as e:
         return {"success": False, "error": str(e)}
