@@ -750,7 +750,7 @@ def get_contacts_count():
 
 
 def search_contacts(query):
-    """Search contacts by name or email."""
+    """Search contacts by name or email. Supports full name search (e.g. 'Chris Vistage')."""
     conn = get_connection()
     cursor = conn.cursor()
     search_term = f"%{query}%"
@@ -760,14 +760,16 @@ def search_contacts(query):
         cursor.execute("""
             SELECT * FROM contacts
             WHERE first_name ILIKE %s OR last_name ILIKE %s OR email ILIKE %s
+                OR (first_name || ' ' || last_name) ILIKE %s
             ORDER BY created_at DESC
-        """, (search_term, search_term, search_term))
+        """, (search_term, search_term, search_term, search_term))
     else:
         cursor.execute("""
             SELECT * FROM contacts
             WHERE first_name LIKE ? OR last_name LIKE ? OR email LIKE ?
+                OR (first_name || ' ' || last_name) LIKE ?
             ORDER BY created_at DESC
-        """, (search_term, search_term, search_term))
+        """, (search_term, search_term, search_term, search_term))
 
     rows = cursor.fetchall()
     conn.close()
