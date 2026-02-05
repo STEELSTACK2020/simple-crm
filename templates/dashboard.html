@@ -356,6 +356,43 @@ function applyMonthFilter() {
         <canvas id="dealsByMonthChart2"></canvas>
     </div>
     <div id="dealsChartLoading" class="hidden text-center py-4 text-gray-500">Loading...</div>
+
+    <!-- Data Table Toggle -->
+    <div class="mt-4 pt-4 border-t">
+        <button onclick="toggleDataTable()" class="text-sm text-slate-600 hover:text-slate-800 flex items-center gap-2">
+            <svg id="tableToggleIcon" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+            <span id="tableToggleText">Show Data Table</span>
+        </button>
+    </div>
+
+    <!-- Data Table (Hidden by default) -->
+    <div id="dealsDataTable" class="hidden mt-4 overflow-x-auto">
+        <table class="min-w-full text-sm border border-gray-200">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-700 border-b">Medium</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Jan</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Feb</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Mar</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Apr</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">May</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Jun</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Jul</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Aug</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Sep</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Oct</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Nov</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b">Dec</th>
+                    <th class="px-3 py-2 text-center font-semibold text-gray-700 border-b bg-gray-200">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody id="dealsDataTableBody">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- Source/Medium Tables -->
@@ -910,8 +947,88 @@ function applyMonthFilter() {
         month_names: [{% for m in deals_by_month.month_names %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
         mediums: [{% for m in deals_by_month.mediums %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
         data: {{ deals_by_month.data | tojson }},
-        totals: {{ deals_by_month.totals | tojson }}
+        revenue: {{ deals_by_month.revenue | tojson }},
+        totals: {{ deals_by_month.totals | tojson }},
+        revenue_totals: {{ deals_by_month.revenue_totals | tojson }}
     };
+
+    // Toggle data table visibility
+    function toggleDataTable() {
+        const table = document.getElementById('dealsDataTable');
+        const icon = document.getElementById('tableToggleIcon');
+        const text = document.getElementById('tableToggleText');
+
+        if (table.classList.contains('hidden')) {
+            table.classList.remove('hidden');
+            icon.classList.add('rotate-180');
+            text.textContent = 'Hide Data Table';
+            populateDataTable();
+        } else {
+            table.classList.add('hidden');
+            icon.classList.remove('rotate-180');
+            text.textContent = 'Show Data Table';
+        }
+    }
+
+    // Populate the data table with current data
+    function populateDataTable() {
+        const tbody = document.getElementById('dealsDataTableBody');
+        const data = currentDealsData;
+
+        let html = '';
+
+        // Sort mediums by total revenue descending
+        const mediumTotals = data.mediums.map(medium => {
+            const totalRev = data.revenue[medium].reduce((a, b) => a + b, 0);
+            const totalCount = data.data[medium].reduce((a, b) => a + b, 0);
+            return { medium, totalRev, totalCount };
+        }).sort((a, b) => b.totalRev - a.totalRev);
+
+        // Add row for each medium
+        mediumTotals.forEach(({ medium, totalRev, totalCount }) => {
+            html += '<tr class="border-b hover:bg-gray-50">';
+            html += '<td class="px-3 py-2 font-medium text-gray-900">' + medium + '</td>';
+
+            for (let i = 0; i < 12; i++) {
+                const count = data.data[medium][i] || 0;
+                const rev = data.revenue[medium][i] || 0;
+
+                if (count > 0) {
+                    html += '<td class="px-3 py-2 text-center"><span class="font-semibold">' + count + '</span><br><span class="text-green-600 text-xs">$' + rev.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td>';
+                } else {
+                    html += '<td class="px-3 py-2 text-center text-gray-400">-</td>';
+                }
+            }
+
+            // Total column
+            html += '<td class="px-3 py-2 text-center bg-gray-100"><span class="font-bold">' + totalCount + '</span><br><span class="text-green-600 font-semibold text-xs">$' + totalRev.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td>';
+            html += '</tr>';
+        });
+
+        // Add totals row
+        html += '<tr class="bg-gray-200 font-bold">';
+        html += '<td class="px-3 py-2">TOTAL</td>';
+
+        let grandCount = 0;
+        let grandRev = 0;
+        for (let i = 0; i < 12; i++) {
+            const count = data.totals[i] || 0;
+            const rev = data.revenue_totals[i] || 0;
+            grandCount += count;
+            grandRev += rev;
+
+            if (count > 0) {
+                html += '<td class="px-3 py-2 text-center"><span class="font-bold">' + count + '</span><br><span class="text-green-700 text-xs">$' + rev.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td>';
+            } else {
+                html += '<td class="px-3 py-2 text-center">-</td>';
+            }
+        }
+
+        html += '<td class="px-3 py-2 text-center bg-gray-300"><span class="font-bold">' + grandCount + '</span><br><span class="text-green-700 font-semibold text-xs">$' + grandRev.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span></td>';
+        html += '</tr>';
+
+        tbody.innerHTML = html;
+    }
 
     function createDealsChart2(data) {
         const ctx = document.getElementById('dealsByMonthChart2').getContext('2d');
@@ -1034,6 +1151,10 @@ function applyMonthFilter() {
             currentDealsYear = year;
             currentDealsData = data;
             createDealsChart2(data);
+            // Refresh table if visible
+            if (!document.getElementById('dealsDataTable').classList.contains('hidden')) {
+                populateDataTable();
+            }
         } catch (error) {
             console.error('Error loading deals data:', error);
         }
