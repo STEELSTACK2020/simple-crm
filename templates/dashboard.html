@@ -85,16 +85,23 @@
             <a href="/" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if not analytics.is_filtered else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                 All Time
             </a>
-            <a href="/?period=2024" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start == '2024-01-01' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+            <a href="/?period=2024" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start and analytics.filter_start.startswith('2024') else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                 2024
             </a>
-            <a href="/?period=2025" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start == '2025-01-01' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+            <a href="/?period=2025" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start and analytics.filter_start.startswith('2025') else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                 2025
             </a>
-            <a href="/?period=2026" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start == '2026-01-01' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+            <a href="/?period=2026" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start and analytics.filter_start.startswith('2026') else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                 2026
             </a>
         </div>
+
+        <!-- Active Filter Indicator -->
+        {% if analytics.is_filtered %}
+        <span class="text-sm text-green-700 bg-green-100 px-2 py-1 rounded">
+            Showing: {{ analytics.filter_start }} to {{ analytics.filter_end }}
+        </span>
+        {% endif %}
 
         <!-- Divider -->
         <span class="text-gray-300">|</span>
