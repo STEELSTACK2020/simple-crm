@@ -176,6 +176,17 @@
             localStorage.removeItem(STORAGE_KEY);
         });
     });
+
+    // Set the month dropdown to match the current period filter
+    const urlParams = new URLSearchParams(window.location.search);
+    const period = urlParams.get('period');
+    if (period && period.length === 7) {
+        // It's a month filter like "2025-01"
+        const monthSelect = document.getElementById('monthSelect');
+        if (monthSelect) {
+            monthSelect.value = period;
+        }
+    }
 })();
 
 function applyMonthFilter() {
