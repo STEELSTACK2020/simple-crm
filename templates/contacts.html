@@ -3,22 +3,22 @@
 {% block title %}Contacts - Simple CRM{% endblock %}
 
 {% block content %}
-<div class="mb-8 flex justify-between items-center">
+<div class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
-        <h1 class="text-3xl font-bold text-gray-900">Contacts</h1>
-        <p class="mt-2 text-gray-600">Manage your contacts and track their value</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Contacts</h1>
+        <p class="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">Manage your contacts and track their value</p>
     </div>
-    <div class="flex gap-3">
-        <a href="/forms" class="bg-white border border-slate-300 hover:bg-gray-50 text-slate-700 px-4 py-2 rounded-lg font-medium">
+    <div class="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
+        <a href="/forms" class="hidden sm:inline-block bg-white border border-slate-300 hover:bg-gray-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm">
             View Form
         </a>
-        <button onclick="openExportModal()" class="bg-white border border-slate-300 hover:bg-gray-50 text-slate-700 px-4 py-2 rounded-lg font-medium">
+        <button onclick="openExportModal()" class="hidden sm:inline-block bg-white border border-slate-300 hover:bg-gray-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm">
             Export CSV
         </button>
-        <button onclick="openImportModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium">
+        <button onclick="openImportModal()" class="hidden sm:inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium text-sm">
             Import CSV
         </button>
-        <a href="/contacts/add" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-medium">
+        <a href="/contacts/add" class="flex-1 sm:flex-none text-center bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-medium text-sm">
             + Add Contact
         </a>
     </div>
@@ -142,19 +142,21 @@ if (urlParams.get('error')) {
 
 <!-- Search and Column Settings -->
 <div class="bg-white rounded-lg shadow p-4 mb-6">
-    <div class="flex gap-4 items-center">
-        <form method="GET" action="/contacts" class="flex gap-4 flex-1">
+    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center">
+        <form method="GET" action="/contacts" class="flex flex-col sm:flex-row gap-2 sm:gap-4 flex-1">
             <input type="text" name="search" value="{{ search_query }}"
                    placeholder="Search by name or email..."
                    class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-700">
-            <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium">
-                Search
-            </button>
-            {% if search_query %}
-            <a href="/contacts" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium">
-                Clear
-            </a>
-            {% endif %}
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium">
+                    Search
+                </button>
+                {% if search_query %}
+                <a href="/contacts" class="flex-1 sm:flex-none text-center bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium">
+                    Clear
+                </a>
+                {% endif %}
+            </div>
         </form>
 
         <!-- Column Settings Dropdown -->
@@ -218,7 +220,51 @@ if (urlParams.get('error')) {
     </div>
 </div>
 
-<!-- Contacts Table -->
+<!-- Mobile Card View - visible only on small screens -->
+<div class="md:hidden space-y-3 mb-6">
+    {% for contact in contacts %}
+    <a href="/contacts/{{ contact.id }}" class="block bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
+        <div class="flex justify-between items-start">
+            <div class="min-w-0 flex-1">
+                <h3 class="font-medium text-gray-900 truncate">{{ contact.first_name }} {{ contact.last_name }}</h3>
+                <p class="text-sm text-gray-500 truncate">{{ contact.email }}</p>
+                {% if contact.phone %}
+                <p class="text-sm text-gray-500">{{ contact.phone }}</p>
+                {% endif %}
+            </div>
+            {% if contact.deal_value > 0 %}
+            <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                ${{ "{:,.0f}".format(contact.deal_value) }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2">
+            {% if contact.utm_medium %}
+            <span class="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800">{{ contact.utm_medium }}</span>
+            {% endif %}
+            {% if contact.utm_source %}
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">{{ contact.utm_source | replace('https://', '') | replace('http://', '') | replace('www.', '') | truncate(15) }}</span>
+            {% endif %}
+            {% if contact.last_activity_date %}
+            <span class="text-xs text-gray-400">Active {{ contact.last_activity_date|format_date }}</span>
+            {% else %}
+            <span class="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700">Never contacted</span>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+    {% if not contacts %}
+    <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+        {% if search_query %}
+        No contacts found matching "{{ search_query }}"
+        {% else %}
+        No contacts yet. <a href="/contacts/add" class="text-slate-800 hover:underline">Add your first contact</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Contacts Table - hidden on mobile -->
 <style>
     .resizable-table th {
         position: relative;
@@ -241,7 +287,7 @@ if (urlParams.get('error')) {
         display: none !important;
     }
 </style>
-<div class="bg-white rounded-lg shadow overflow-x-auto">
+<div class="hidden md:block bg-white rounded-lg shadow overflow-x-auto">
     <table id="contacts-table" class="min-w-full divide-y divide-gray-200 resizable-table" style="table-layout: fixed;">
         <thead class="bg-gray-50">
             <tr id="header-row">
@@ -348,14 +394,14 @@ if (urlParams.get('error')) {
 </div>
 
 <!-- Pagination -->
-<div class="mt-4 flex justify-between items-center">
-    <div class="text-sm text-gray-500">
+<div class="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div class="text-sm text-gray-500 order-2 sm:order-1">
         Showing {{ contacts | length }} of {{ total_contacts }} contact(s)
     </div>
 
-    <div class="flex items-center gap-4">
-        <!-- Per Page Selector -->
-        <div class="flex items-center gap-2">
+    <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 order-1 sm:order-2 w-full sm:w-auto">
+        <!-- Per Page Selector - hidden on mobile -->
+        <div class="hidden sm:flex items-center gap-2">
             <span class="text-sm text-gray-600">Show:</span>
             <select onchange="window.location.href='/contacts?per_page=' + this.value + '&page=1&sort={{ sort_by }}&dir={{ sort_dir }}'"
                     class="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
@@ -370,23 +416,25 @@ if (urlParams.get('error')) {
         <div class="flex items-center gap-1">
             {% if page > 1 %}
             <a href="/contacts?page={{ page - 1 }}&per_page={{ per_page }}&sort={{ sort_by }}&dir={{ sort_dir }}"
-               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">&laquo; Prev</a>
+               class="px-3 py-2 sm:py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">&laquo; Prev</a>
             {% endif %}
+
+            <span class="sm:hidden px-3 py-2 text-sm text-gray-600">Page {{ page }} of {{ total_pages }}</span>
 
             {% for p in range(1, total_pages + 1) %}
                 {% if p == page %}
-                <span class="px-3 py-1 text-sm bg-slate-800 text-white rounded">{{ p }}</span>
+                <span class="hidden sm:inline px-3 py-1 text-sm bg-slate-800 text-white rounded">{{ p }}</span>
                 {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
                 <a href="/contacts?page={{ p }}&per_page={{ per_page }}&sort={{ sort_by }}&dir={{ sort_dir }}"
-                   class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">{{ p }}</a>
+                   class="hidden sm:inline px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">{{ p }}</a>
                 {% elif p == page - 3 or p == page + 3 %}
-                <span class="px-2 text-gray-400">...</span>
+                <span class="hidden sm:inline px-2 text-gray-400">...</span>
                 {% endif %}
             {% endfor %}
 
             {% if page < total_pages %}
             <a href="/contacts?page={{ page + 1 }}&per_page={{ per_page }}&sort={{ sort_by }}&dir={{ sort_dir }}"
-               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Next &raquo;</a>
+               class="px-3 py-2 sm:py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Next &raquo;</a>
             {% endif %}
         </div>
         {% endif %}

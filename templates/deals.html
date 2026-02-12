@@ -4,70 +4,65 @@
 
 {% block content %}
 <!-- Filter Bar -->
-<div class="flex items-center justify-between mb-4">
-    <div class="flex items-center gap-4 flex-wrap">
-        <div class="flex items-center gap-2">
+<div class="bg-white rounded-lg shadow p-3 sm:p-4 mb-4">
+    <div class="flex flex-col gap-3">
+        <!-- Row 1: Search and main filters -->
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
             <input type="text" id="search-input" placeholder="Search deals..."
                    value="{{ search_query or '' }}"
                    onkeypress="if(event.key === 'Enter') applyFilters()"
-                   class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 w-40">
+                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 w-full sm:w-40">
+            <div class="flex gap-2 flex-1">
+                <select id="salesperson-filter" onchange="applyFilters()"
+                        class="flex-1 sm:flex-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    <option value="">All Sales</option>
+                    {% for sp in salespeople %}
+                    <option value="{{ sp.name }}" {{ 'selected' if current_salesperson == sp.name else '' }}>{{ sp.name }}</option>
+                    {% endfor %}
+                </select>
+                <select id="stage-filter" onchange="applyFilters()"
+                        class="flex-1 sm:flex-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    <option value="">All Stages</option>
+                    <option value="closed_won" {{ 'selected' if current_stage == 'closed_won' else '' }}>Closed Won</option>
+                    <option value="closed_lost" {{ 'selected' if current_stage == 'closed_lost' else '' }}>Closed Lost</option>
+                    <option value="new_deal" {{ 'selected' if current_stage == 'new_deal' else '' }}>New Deal</option>
+                    <option value="proposal" {{ 'selected' if current_stage == 'proposal' else '' }}>Proposal</option>
+                    <option value="negotiation" {{ 'selected' if current_stage == 'negotiation' else '' }}>Negotiation</option>
+                </select>
+            </div>
         </div>
-        <div class="flex items-center gap-2">
-            <label class="text-sm font-medium text-gray-700">Salesperson:</label>
-            <select id="salesperson-filter" onchange="applyFilters()"
-                    class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
-                <option value="">All</option>
-                {% for sp in salespeople %}
-                <option value="{{ sp.name }}" {{ 'selected' if current_salesperson == sp.name else '' }}>{{ sp.name }}</option>
-                {% endfor %}
-            </select>
-            <a href="/salespeople" class="text-xs text-slate-600 hover:text-slate-800 hover:underline">manage</a>
-        </div>
-        <div class="flex items-center gap-2">
-            <label class="text-sm font-medium text-gray-700">Stage:</label>
-            <select id="stage-filter" onchange="applyFilters()"
-                    class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
-                <option value="">All Stages</option>
-                <option value="closed_won" {{ 'selected' if current_stage == 'closed_won' else '' }}>Closed Won</option>
-                <option value="closed_lost" {{ 'selected' if current_stage == 'closed_lost' else '' }}>Closed Lost</option>
-                <option value="new_deal" {{ 'selected' if current_stage == 'new_deal' else '' }}>New Deal</option>
-                <option value="proposal" {{ 'selected' if current_stage == 'proposal' else '' }}>Proposal</option>
-                <option value="negotiation" {{ 'selected' if current_stage == 'negotiation' else '' }}>Negotiation</option>
-            </select>
-        </div>
-        <div class="flex items-center gap-1">
+
+        <!-- Row 2: Date filters -->
+        <div class="flex items-center gap-1 overflow-x-auto pb-1">
             <button onclick="shiftMonth(-1)" title="Previous month"
-                    class="px-2 py-1.5 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-bold">&larr;</button>
-            <div class="flex items-center gap-1">
-                <label class="text-sm font-medium text-gray-700">From:</label>
-                <input type="date" id="date-from" value="{{ date_from or '' }}" onchange="applyFilters()"
-                       class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
-            </div>
-            <div class="flex items-center gap-1">
-                <label class="text-sm font-medium text-gray-700">To:</label>
-                <input type="date" id="date-to" value="{{ date_to or '' }}" onchange="applyFilters()"
-                       class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700">
-            </div>
+                    class="px-3 py-2 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-bold flex-shrink-0">&larr;</button>
+            <input type="date" id="date-from" value="{{ date_from or '' }}" onchange="applyFilters()"
+                   class="border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 flex-shrink-0">
+            <span class="text-gray-400 flex-shrink-0">to</span>
+            <input type="date" id="date-to" value="{{ date_to or '' }}" onchange="applyFilters()"
+                   class="border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 flex-shrink-0">
             <button onclick="shiftMonth(1)" title="Next month"
-                    class="px-2 py-1.5 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-bold">&rarr;</button>
+                    class="px-3 py-2 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-bold flex-shrink-0">&rarr;</button>
             <button onclick="goToMonth(0)" title="This month"
-                    class="px-2 py-1.5 text-xs text-slate-700 hover:bg-slate-200 rounded-lg font-medium border border-gray-300">This Month</button>
+                    class="px-3 py-2 text-xs text-slate-700 hover:bg-slate-200 rounded-lg font-medium border border-gray-300 whitespace-nowrap flex-shrink-0">This Month</button>
+            {% if current_salesperson or current_stage or search_query or date_from or date_to %}
+            <button onclick="clearAllFilters()" class="px-3 py-2 text-sm text-red-600 hover:text-red-800 font-medium whitespace-nowrap flex-shrink-0">Clear</button>
+            {% endif %}
         </div>
+
+        <!-- Active filter indicator -->
         {% if current_salesperson or current_stage or search_query or date_from or date_to %}
-        <button onclick="clearAllFilters()" class="text-sm text-red-600 hover:text-red-800 underline font-medium">Clear All</button>
+        <div class="text-sm text-gray-500 bg-gray-50 rounded px-2 py-1">
+            Filtered{% if search_query %}: "<strong>{{ search_query }}</strong>"{% endif %}
+            {% if (current_salesperson or current_stage or date_from or date_to) and search_query %} + {% endif %}
+            {% if current_salesperson %}<strong>{{ current_salesperson }}</strong>{% endif %}
+            {% if current_salesperson and (current_stage or date_from) %} / {% endif %}
+            {% if current_stage %}<strong>{{ current_stage|replace('_', ' ')|title }}</strong>{% endif %}
+            {% if (current_stage and (date_from or date_to)) %} / {% endif %}
+            {% if date_from or date_to %}<strong>{{ date_from or 'Start' }} - {{ date_to or 'Now' }}</strong>{% endif %}
+        </div>
         {% endif %}
     </div>
-    {% if current_salesperson or current_stage or search_query or date_from or date_to %}
-    <span class="text-sm text-gray-500">
-        Filtered{% if search_query %}: "<strong>{{ search_query }}</strong>"{% endif %}
-        {% if (current_salesperson or current_stage or date_from or date_to) and search_query %} + {% endif %}
-        {% if current_salesperson %}<strong>{{ current_salesperson }}</strong>{% endif %}
-        {% if current_salesperson and (current_stage or date_from) %} / {% endif %}
-        {% if current_stage %}<strong>{{ current_stage|replace('_', ' ')|title }}</strong>{% endif %}
-        {% if (current_stage and (date_from or date_to)) %} / {% endif %}
-        {% if date_from or date_to %}<strong>{{ date_from or 'Start' }} - {{ date_to or 'Now' }}</strong>{% endif %}
-    </span>
-    {% endif %}
 </div>
 
 <script>
@@ -160,34 +155,34 @@ function applyFilters() {
 </script>
 
 <!-- Stats Bar - Compact -->
-<div class="grid grid-cols-5 gap-3 mb-4">
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 mb-4">
     <div class="bg-white rounded-lg shadow p-3">
-        <p class="text-gray-500 text-xs">Pipeline Value</p>
-        <p class="text-xl font-bold text-slate-800">${{ "{:,.0f}".format(analytics.pipeline_value) }}</p>
+        <p class="text-gray-500 text-xs">Pipeline</p>
+        <p class="text-lg sm:text-xl font-bold text-slate-800">${{ "{:,.0f}".format(analytics.pipeline_value) }}</p>
     </div>
     <div class="bg-white rounded-lg shadow p-3">
-        <p class="text-gray-500 text-xs">Won Revenue</p>
-        <p class="text-xl font-bold text-green-600">${{ "{:,.0f}".format(analytics.won_value) }}</p>
+        <p class="text-gray-500 text-xs">Won</p>
+        <p class="text-lg sm:text-xl font-bold text-green-600">${{ "{:,.0f}".format(analytics.won_value) }}</p>
     </div>
     <div class="bg-white rounded-lg shadow p-3">
         <p class="text-gray-500 text-xs">Win Rate</p>
-        <p class="text-xl font-bold text-blue-600">{{ analytics.win_rate }}%</p>
+        <p class="text-lg sm:text-xl font-bold text-blue-600">{{ analytics.win_rate }}%</p>
     </div>
     <div class="bg-white rounded-lg shadow p-3">
-        <p class="text-gray-500 text-xs">Total Deals</p>
-        <p class="text-xl font-bold text-gray-700">{{ analytics.total_deals }}</p>
+        <p class="text-gray-500 text-xs">Deals</p>
+        <p class="text-lg sm:text-xl font-bold text-gray-700">{{ analytics.total_deals }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow p-3">
-        <p class="text-gray-500 text-xs">Avg Deal Size</p>
-        <p class="text-xl font-bold text-gray-700">${{ "{:,.0f}".format(analytics.avg_deal_value) }}</p>
+    <div class="bg-white rounded-lg shadow p-3 col-span-2 sm:col-span-1">
+        <p class="text-gray-500 text-xs">Avg Size</p>
+        <p class="text-lg sm:text-xl font-bold text-gray-700">${{ "{:,.0f}".format(analytics.avg_deal_value) }}</p>
     </div>
 </div>
 
 <!-- Pipeline Board -->
-<div class="pipeline-board rounded-xl p-4">
-    <div class="flex gap-3 h-full">
+<div class="pipeline-board rounded-xl p-2 sm:p-4 overflow-x-auto">
+    <div class="flex gap-2 sm:gap-3 h-full min-w-max md:min-w-0">
         {% for stage in stages %}
-        <div class="flex-1 min-w-0">
+        <div class="w-64 sm:w-auto md:flex-1 flex-shrink-0 md:flex-shrink">
             <div class="pipeline-column-wrapper h-full rounded-lg p-2
                 {% if stage == 'new_deal' %}bg-blue-50 border border-blue-200
                 {% elif stage == 'proposal' %}bg-purple-50 border border-purple-200
@@ -260,6 +255,15 @@ function applyFilters() {
                             </span>
                         </div>
                         {% endif %}
+                        <!-- Mobile Move Dropdown -->
+                        <div class="mt-2 md:hidden" onclick="event.stopPropagation();">
+                            <select onchange="moveDealMobile({{ deal.id }}, this.value)" class="w-full text-xs border border-gray-200 rounded px-2 py-1.5 bg-gray-50">
+                                <option value="">Move to...</option>
+                                {% for s in stages if s != stage %}
+                                <option value="{{ s }}">{% if s == 'new_deal' %}New Deal{% elif s == 'closed_won' %}Closed Won{% elif s == 'closed_lost' %}Closed Lost{% else %}{{ s|replace('_', ' ')|title }}{% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
@@ -471,6 +475,35 @@ function completeStageUpdate(dealId, newStage, column, closeReason) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        window.location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        window.location.reload();
+    });
+}
+
+// Mobile-friendly move function
+function moveDealMobile(dealId, newStage) {
+    if (!newStage) return;
+
+    // If moving to a closed stage, show the modal
+    if (newStage === 'closed_won' || newStage === 'closed_lost') {
+        pendingDealId = dealId;
+        pendingStage = newStage;
+        pendingColumn = null; // Not used for mobile
+        showCloseReasonModal(newStage);
+        return;
+    }
+
+    // Otherwise, proceed with the stage update
+    fetch(`/api/deals/${dealId}/stage`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: newStage })
     })
     .then(response => response.json())
     .then(data => {

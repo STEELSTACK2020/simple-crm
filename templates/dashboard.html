@@ -77,38 +77,38 @@
 
 <!-- Date Filter Controls -->
 <div class="bg-white rounded-lg shadow p-4 mb-8">
-    <div class="flex flex-wrap items-center gap-4">
+    <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4">
         <span class="text-sm font-medium text-gray-700">Filter by Close Date:</span>
 
         <!-- Quick Select Buttons -->
         <div class="flex flex-wrap gap-2">
-            <a href="/" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if not analytics.is_filtered else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+            <a href="/" class="px-3 py-2 sm:py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if not analytics.is_filtered else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                 All Time
             </a>
-            <a href="/?period=2024" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start and analytics.filter_start.startswith('2024') else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+            <a href="/?period=2024" class="px-3 py-2 sm:py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start and analytics.filter_start.startswith('2024') else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                 2024
             </a>
-            <a href="/?period=2025" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start and analytics.filter_start.startswith('2025') else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+            <a href="/?period=2025" class="px-3 py-2 sm:py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start and analytics.filter_start.startswith('2025') else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                 2025
             </a>
-            <a href="/?period=2026" class="px-3 py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start and analytics.filter_start.startswith('2026') else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+            <a href="/?period=2026" class="px-3 py-2 sm:py-1.5 text-sm rounded-lg {{ 'bg-slate-800 text-white' if analytics.filter_start and analytics.filter_start.startswith('2026') else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                 2026
             </a>
         </div>
 
         <!-- Active Filter Indicator -->
         {% if analytics.is_filtered %}
-        <span class="text-sm text-green-700 bg-green-100 px-2 py-1 rounded">
+        <span class="text-sm text-green-700 bg-green-100 px-2 py-1 rounded order-first sm:order-none w-full sm:w-auto">
             Showing: {{ analytics.filter_start }} to {{ analytics.filter_end }}
         </span>
         {% endif %}
 
-        <!-- Divider -->
-        <span class="text-gray-300">|</span>
+        <!-- Divider - hidden on mobile -->
+        <span class="hidden sm:inline text-gray-300">|</span>
 
         <!-- Month Quick Select -->
-        <div class="flex items-center gap-2">
-            <select id="monthSelect" class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+            <select id="monthSelect" class="flex-1 sm:flex-none text-sm border border-gray-300 rounded-lg px-3 py-2 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
                 <option value="">Select Month...</option>
                 <option value="2025-01">Jan 2025</option>
                 <option value="2025-02">Feb 2025</option>
@@ -135,22 +135,24 @@
                 <option value="2026-11">Nov 2026</option>
                 <option value="2026-12">Dec 2026</option>
             </select>
-            <button onclick="applyMonthFilter()" class="px-3 py-1.5 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900">
+            <button onclick="applyMonthFilter()" class="px-4 py-2 sm:py-1.5 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900">
                 Go
             </button>
         </div>
 
-        <!-- Divider -->
-        <span class="text-gray-300">|</span>
+        <!-- Divider - hidden on mobile -->
+        <span class="hidden sm:inline text-gray-300">|</span>
 
         <!-- Custom Date Range -->
-        <form method="GET" action="/" class="flex items-center gap-2">
-            <input type="date" name="start_date" value="{{ analytics.filter_start or '' }}"
-                   class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
-            <span class="text-gray-500">to</span>
-            <input type="date" name="end_date" value="{{ analytics.filter_end or '' }}"
-                   class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
-            <button type="submit" class="px-3 py-1.5 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900">
+        <form method="GET" action="/" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <div class="flex items-center gap-2">
+                <input type="date" name="start_date" value="{{ analytics.filter_start or '' }}"
+                       class="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                <span class="text-gray-500">to</span>
+                <input type="date" name="end_date" value="{{ analytics.filter_end or '' }}"
+                       class="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
+            </div>
+            <button type="submit" class="px-4 py-2 sm:py-1.5 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900">
                 Apply
             </button>
         </form>
