@@ -728,7 +728,9 @@ def traffic_dashboard():
         if traffic_by_month is None or 'error' in traffic_by_month:
             traffic_by_month = get_demo_traffic_by_month()
         if top_pages is None or 'error' in top_pages:
-            top_pages = get_demo_top_pages()
+            # Don't fall back to demo data - show empty table with error
+            error_msg = top_pages.get('error', 'Could not fetch page data') if top_pages else 'No data'
+            top_pages = {'pages': [], 'is_demo': False, 'error': error_msg}
     else:
         traffic = get_demo_traffic_data()
         traffic_by_month = get_demo_traffic_by_month()
