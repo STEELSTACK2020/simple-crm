@@ -49,8 +49,8 @@ from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RAT
 from analytics_ga import (
     is_oauth_configured, is_ga_connected, get_ga_config, save_ga_config,
     fetch_traffic_by_channel, fetch_traffic_by_channel_and_month,
-    fetch_phone_clicks,
-    get_demo_traffic_data, get_demo_traffic_by_month,
+    fetch_phone_clicks, fetch_top_pages,
+    get_demo_traffic_data, get_demo_traffic_by_month, get_demo_top_pages,
     get_oauth_flow, save_oauth_token, save_oauth_secrets, get_oauth_secrets,
     disconnect_ga, migrate_ga_files_to_database,
     get_websites, get_website, add_website, remove_website, get_default_website
@@ -717,6 +717,7 @@ def traffic_dashboard():
         website_id = current_website['id']
         traffic = fetch_traffic_by_channel(start_date, end_date, website_id)
         traffic_by_month = fetch_traffic_by_channel_and_month(website_id=website_id)
+        top_pages = fetch_top_pages(start_date, end_date, website_id)
         phone_data = fetch_phone_clicks(start_date, end_date, website_id)
         if phone_data:
             phone_clicks = phone_data.get('phone_clicks', 0)
@@ -726,9 +727,12 @@ def traffic_dashboard():
             traffic['error_message'] = traffic.get('error', 'Could not fetch data')
         if traffic_by_month is None or 'error' in traffic_by_month:
             traffic_by_month = get_demo_traffic_by_month()
+        if top_pages is None or 'error' in top_pages:
+            top_pages = get_demo_top_pages()
     else:
         traffic = get_demo_traffic_data()
         traffic_by_month = get_demo_traffic_by_month()
+        top_pages = get_demo_top_pages()
 
     # Get leads by month and medium from CRM data
     leads_by_month = get_leads_by_month_medium()
@@ -737,6 +741,7 @@ def traffic_dashboard():
                            traffic=traffic,
                            traffic_by_month=traffic_by_month,
                            leads_by_month=leads_by_month,
+                           top_pages=top_pages,
                            phone_clicks=phone_clicks,
                            ga_connected=ga_connected,
                            oauth_configured=oauth_configured,

@@ -575,6 +575,95 @@ def fetch_traffic_by_channel_and_month(year=None, website_id=None):
         return {'error': str(e)}
 
 
+def fetch_top_pages(start_date=None, end_date=None, website_id=None, limit=15):
+    """
+    Fetch top pages with engagement metrics from GA4.
+    """
+    if not GA_AVAILABLE or not is_ga_connected():
+        return None
+
+    # Get website (specific or default)
+    if website_id:
+        website = get_website(website_id)
+    else:
+        website = get_default_website()
+
+    if not website:
+        return None
+
+    client = get_ga_client()
+    if not client:
+        return None
+
+    # Default to last 30 days
+    if not end_date:
+        end_date = datetime.now().strftime('%Y-%m-%d')
+    if not start_date:
+        start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+
+    property_id = website['property_id']
+
+    try:
+        request = RunReportRequest(
+            property=f"properties/{property_id}",
+            date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
+            dimensions=[
+                Dimension(name="pagePath"),
+                Dimension(name="pageTitle"),
+            ],
+            metrics=[
+                Metric(name="screenPageViews"),
+                Metric(name="totalUsers"),
+                Metric(name="bounceRate"),
+                Metric(name="averageSessionDuration"),
+                Metric(name="entrances"),
+            ],
+            limit=limit
+        )
+
+        response = client.run_report(request)
+
+        pages = []
+        for row in response.rows:
+            page_path = row.dimension_values[0].value
+            page_title = row.dimension_values[1].value
+            views = int(row.metric_values[0].value)
+            users = int(row.metric_values[1].value)
+            bounce_rate = float(row.metric_values[2].value) * 100
+            avg_duration = float(row.metric_values[3].value)
+            entrances = int(row.metric_values[4].value)
+
+            # Clean up page title (truncate if too long)
+            if len(page_title) > 50:
+                page_title = page_title[:47] + '...'
+
+            pages.append({
+                'path': page_path,
+                'title': page_title,
+                'views': views,
+                'users': users,
+                'bounce_rate': round(bounce_rate, 1),
+                'avg_duration': round(avg_duration, 1),
+                'entrances': entrances,
+            })
+
+        # Sort by views (descending)
+        pages.sort(key=lambda x: x['views'], reverse=True)
+
+        return {
+            'pages': pages,
+            'date_range': {
+                'start': start_date,
+                'end': end_date,
+            },
+            'is_demo': False
+        }
+
+    except Exception as e:
+        print(f"GA4 Top Pages Error: {e}")
+        return {'error': str(e)}
+
+
 def fetch_ga_properties():
     """Fetch list of GA4 properties the user has access to."""
     if not GA_AVAILABLE or not is_oauth_configured():
@@ -671,5 +760,28 @@ def get_demo_traffic_by_month(year=None):
         'data': chart_data,
         'totals': monthly_totals,
         'available_years': available_years,
+        'is_demo': True,
+    }
+
+
+def get_demo_top_pages():
+    """Return demo page data for preview when GA is not connected."""
+    return {
+        'pages': [
+            {'path': '/', 'title': 'Home - Steelstack', 'views': 3245, 'users': 2876, 'bounce_rate': 38.2, 'avg_duration': 124.5, 'entrances': 2654},
+            {'path': '/products', 'title': 'Products - Steelstack', 'views': 1823, 'users': 1456, 'bounce_rate': 32.1, 'avg_duration': 187.3, 'entrances': 892},
+            {'path': '/contact', 'title': 'Contact Us - Steelstack', 'views': 987, 'users': 834, 'bounce_rate': 45.6, 'avg_duration': 95.2, 'entrances': 423},
+            {'path': '/about', 'title': 'About Us - Steelstack', 'views': 756, 'users': 623, 'bounce_rate': 52.3, 'avg_duration': 78.4, 'entrances': 312},
+            {'path': '/products/heavy-duty-racks', 'title': 'Heavy Duty Racks - Steelstack', 'views': 634, 'users': 521, 'bounce_rate': 28.7, 'avg_duration': 245.6, 'entrances': 287},
+            {'path': '/products/cantilever-racks', 'title': 'Cantilever Racks - Steelstack', 'views': 523, 'users': 445, 'bounce_rate': 31.2, 'avg_duration': 198.3, 'entrances': 234},
+            {'path': '/quote', 'title': 'Get a Quote - Steelstack', 'views': 456, 'users': 398, 'bounce_rate': 22.4, 'avg_duration': 312.7, 'entrances': 189},
+            {'path': '/products/pallet-racks', 'title': 'Pallet Racks - Steelstack', 'views': 412, 'users': 356, 'bounce_rate': 29.8, 'avg_duration': 176.5, 'entrances': 167},
+            {'path': '/shipping', 'title': 'Shipping Info - Steelstack', 'views': 287, 'users': 245, 'bounce_rate': 48.9, 'avg_duration': 89.3, 'entrances': 98},
+            {'path': '/gallery', 'title': 'Gallery - Steelstack', 'views': 234, 'users': 198, 'bounce_rate': 56.7, 'avg_duration': 67.8, 'entrances': 87},
+        ],
+        'date_range': {
+            'start': (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'),
+            'end': datetime.now().strftime('%Y-%m-%d'),
+        },
         'is_demo': True,
     }
