@@ -998,11 +998,21 @@ def api_get_emails(email_address):
     max_results = request.args.get('max_results', 20, type=int)
 
     # Auto-assign salesperson: if contact has no salesperson and user is linked to one
+    # Use direct SQL to avoid updating last_activity_date
     contact = get_contact_by_email(email_address)
     if contact and not contact.get('salesperson_id'):
         sp = get_salesperson_for_user(user_id)
         if sp:
-            update_contact(contact['id'], salesperson_id=sp['id'])
+            from database import get_connection
+            conn = get_connection()
+            cursor = conn.cursor()
+            import os
+            if os.environ.get('DATABASE_URL'):
+                cursor.execute("UPDATE contacts SET salesperson_id = %s WHERE id = %s", (sp['id'], contact['id']))
+            else:
+                cursor.execute("UPDATE contacts SET salesperson_id = ? WHERE id = ?", (sp['id'], contact['id']))
+            conn.commit()
+            conn.close()
             print(f"Auto-assigned salesperson '{sp['name']}' to contact '{contact['first_name']} {contact['last_name']}'")
 
     result = fetch_emails_for_contact_all_users(email_address, max_results=max_results)
