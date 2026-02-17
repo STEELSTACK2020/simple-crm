@@ -575,7 +575,7 @@ def fetch_traffic_by_channel_and_month(year=None, website_id=None):
         return {'error': str(e)}
 
 
-def fetch_top_pages(start_date=None, end_date=None, website_id=None, limit=15):
+def fetch_top_pages(start_date=None, end_date=None, website_id=None, limit=100):
     """
     Fetch top pages with engagement metrics from GA4.
     """
