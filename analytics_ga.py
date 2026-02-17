@@ -616,7 +616,6 @@ def fetch_top_pages(start_date=None, end_date=None, website_id=None, limit=15):
                 Metric(name="totalUsers"),
                 Metric(name="bounceRate"),
                 Metric(name="averageSessionDuration"),
-                Metric(name="entrances"),
             ],
             limit=limit
         )
@@ -631,7 +630,6 @@ def fetch_top_pages(start_date=None, end_date=None, website_id=None, limit=15):
             users = int(row.metric_values[1].value)
             bounce_rate = float(row.metric_values[2].value) * 100
             avg_duration = float(row.metric_values[3].value)
-            entrances = int(row.metric_values[4].value)
 
             # Clean up page title (truncate if too long)
             if len(page_title) > 50:
@@ -644,7 +642,6 @@ def fetch_top_pages(start_date=None, end_date=None, website_id=None, limit=15):
                 'users': users,
                 'bounce_rate': round(bounce_rate, 1),
                 'avg_duration': round(avg_duration, 1),
-                'entrances': entrances,
             })
 
         # Sort by views (descending)
@@ -768,16 +765,16 @@ def get_demo_top_pages():
     """Return demo page data for preview when GA is not connected."""
     return {
         'pages': [
-            {'path': '/', 'title': 'Home - Steelstack', 'views': 3245, 'users': 2876, 'bounce_rate': 38.2, 'avg_duration': 124.5, 'entrances': 2654},
-            {'path': '/products', 'title': 'Products - Steelstack', 'views': 1823, 'users': 1456, 'bounce_rate': 32.1, 'avg_duration': 187.3, 'entrances': 892},
-            {'path': '/contact', 'title': 'Contact Us - Steelstack', 'views': 987, 'users': 834, 'bounce_rate': 45.6, 'avg_duration': 95.2, 'entrances': 423},
-            {'path': '/about', 'title': 'About Us - Steelstack', 'views': 756, 'users': 623, 'bounce_rate': 52.3, 'avg_duration': 78.4, 'entrances': 312},
-            {'path': '/products/heavy-duty-racks', 'title': 'Heavy Duty Racks - Steelstack', 'views': 634, 'users': 521, 'bounce_rate': 28.7, 'avg_duration': 245.6, 'entrances': 287},
-            {'path': '/products/cantilever-racks', 'title': 'Cantilever Racks - Steelstack', 'views': 523, 'users': 445, 'bounce_rate': 31.2, 'avg_duration': 198.3, 'entrances': 234},
-            {'path': '/quote', 'title': 'Get a Quote - Steelstack', 'views': 456, 'users': 398, 'bounce_rate': 22.4, 'avg_duration': 312.7, 'entrances': 189},
-            {'path': '/products/pallet-racks', 'title': 'Pallet Racks - Steelstack', 'views': 412, 'users': 356, 'bounce_rate': 29.8, 'avg_duration': 176.5, 'entrances': 167},
-            {'path': '/shipping', 'title': 'Shipping Info - Steelstack', 'views': 287, 'users': 245, 'bounce_rate': 48.9, 'avg_duration': 89.3, 'entrances': 98},
-            {'path': '/gallery', 'title': 'Gallery - Steelstack', 'views': 234, 'users': 198, 'bounce_rate': 56.7, 'avg_duration': 67.8, 'entrances': 87},
+            {'path': '/', 'title': 'Home', 'views': 3245, 'users': 2876, 'bounce_rate': 38.2, 'avg_duration': 124.5},
+            {'path': '/products', 'title': 'Products', 'views': 1823, 'users': 1456, 'bounce_rate': 32.1, 'avg_duration': 187.3},
+            {'path': '/contact', 'title': 'Contact Us', 'views': 987, 'users': 834, 'bounce_rate': 45.6, 'avg_duration': 95.2},
+            {'path': '/about', 'title': 'About Us', 'views': 756, 'users': 623, 'bounce_rate': 52.3, 'avg_duration': 78.4},
+            {'path': '/services', 'title': 'Services', 'views': 634, 'users': 521, 'bounce_rate': 28.7, 'avg_duration': 245.6},
+            {'path': '/portfolio', 'title': 'Portfolio', 'views': 523, 'users': 445, 'bounce_rate': 31.2, 'avg_duration': 198.3},
+            {'path': '/quote', 'title': 'Get a Quote', 'views': 456, 'users': 398, 'bounce_rate': 22.4, 'avg_duration': 312.7},
+            {'path': '/faq', 'title': 'FAQ', 'views': 412, 'users': 356, 'bounce_rate': 29.8, 'avg_duration': 176.5},
+            {'path': '/shipping', 'title': 'Shipping Info', 'views': 287, 'users': 245, 'bounce_rate': 48.9, 'avg_duration': 89.3},
+            {'path': '/gallery', 'title': 'Gallery', 'views': 234, 'users': 198, 'bounce_rate': 56.7, 'avg_duration': 67.8},
         ],
         'date_range': {
             'start': (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'),
