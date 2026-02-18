@@ -47,7 +47,8 @@ from database import (
     get_marketing_shortcuts, add_marketing_shortcut, update_marketing_shortcut,
     delete_marketing_shortcut, init_default_marketing_shortcuts,
     get_marketing_categories, add_marketing_category, update_marketing_category,
-    delete_marketing_category, get_shortcuts_by_category, add_missing_shortcuts
+    delete_marketing_category, get_shortcuts_by_category, add_missing_shortcuts,
+    reorder_shortcuts, move_shortcut_to_category
 )
 from pdf_generator import generate_quote_pdf
 from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RATE_PER_MILE
@@ -1015,6 +1016,29 @@ def api_add_missing_shortcuts():
     """Add new shortcuts that don't exist yet."""
     added = add_missing_shortcuts()
     return jsonify({'success': True, 'added': added})
+
+
+@app.route('/api/marketing/shortcuts/reorder', methods=['POST'])
+@login_required
+def api_reorder_shortcuts():
+    """Reorder shortcuts within a category."""
+    data = request.get_json()
+    shortcut_ids = data.get('shortcut_ids', [])
+    reorder_shortcuts(shortcut_ids)
+    return jsonify({'success': True})
+
+
+@app.route('/api/marketing/shortcuts/<shortcut_id>/move', methods=['POST'])
+@login_required
+def api_move_shortcut(shortcut_id):
+    """Move a shortcut to a different category."""
+    data = request.get_json()
+    new_category_id = data.get('category_id', '')
+    new_order = data.get('order')
+    shortcut = move_shortcut_to_category(shortcut_id, new_category_id, new_order)
+    if shortcut:
+        return jsonify({'success': True, 'shortcut': shortcut})
+    return jsonify({'success': False, 'error': 'Shortcut not found'}), 404
 
 
 # ============== Email Settings Routes ==============

@@ -19,21 +19,35 @@
 </div>
 
 <!-- Marketing Shortcuts by Category -->
-<div class="mb-8 space-y-6">
+<div class="mb-8 space-y-6" id="shortcutsContainer">
     {% for cat_name, cat_data in shortcuts_by_category %}
-    <div class="bg-white rounded-lg shadow p-4">
-        <div class="flex items-center justify-between mb-3">
-            <h3 class="text-lg font-semibold text-gray-800">{{ cat_name }}</h3>
+    <div class="bg-white rounded-lg shadow category-section" data-category-id="{{ cat_data.id }}">
+        <div class="flex items-center justify-between p-4 cursor-pointer select-none" onclick="toggleCategory(this)">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-400 transition-transform category-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-800">{{ cat_name }}</h3>
+                <span class="text-sm text-gray-400">({{ cat_data.shortcuts|length }})</span>
+            </div>
             {% if cat_data.id %}
-            <button onclick="openEditCategoryModal('{{ cat_data.id }}', '{{ cat_name }}')" class="text-gray-400 hover:text-gray-600 text-sm">
-                Edit Category
+            <button onclick="event.stopPropagation(); openEditCategoryModal('{{ cat_data.id }}', '{{ cat_name }}')" class="text-gray-400 hover:text-gray-600 text-sm">
+                Edit
             </button>
             {% endif %}
         </div>
-        <div class="flex flex-wrap gap-4">
+        <div class="category-content px-4 pb-4">
+            <div class="flex flex-wrap gap-4 shortcuts-container" data-category-id="{{ cat_data.id }}">
             {% for shortcut in cat_data.shortcuts %}
-            <div class="shortcut-card bg-gray-50 rounded-lg hover:shadow-md transition-shadow p-4 w-36 text-center cursor-pointer relative group"
-                 onclick="openShortcut('{{ shortcut.url }}')" data-id="{{ shortcut.id }}">
+            <div class="shortcut-card bg-gray-50 rounded-lg hover:shadow-md transition-shadow p-4 w-36 text-center cursor-grab relative group"
+                 draggable="true"
+                 ondragstart="dragStart(event)"
+                 ondragend="dragEnd(event)"
+                 ondragover="dragOver(event)"
+                 ondrop="drop(event)"
+                 onclick="openShortcut('{{ shortcut.url }}')"
+                 data-id="{{ shortcut.id }}"
+                 data-category="{{ cat_data.id }}">
                 <!-- Edit button -->
                 <button onclick="event.stopPropagation(); openEditShortcutModal('{{ shortcut.id }}')"
                         class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600">
@@ -76,6 +90,7 @@
                 {% endif %}
             </div>
             {% endfor %}
+            </div>
         </div>
     </div>
     {% endfor %}
@@ -924,6 +939,162 @@
 
     // ========== MARKETING SHORTCUTS ==========
     let shortcutsData = {{ shortcuts | tojson }};
+    let draggedElement = null;
+
+    // ========== COLLAPSE/EXPAND ==========
+    function toggleCategory(header) {
+        const section = header.closest('.category-section');
+        const content = section.querySelector('.category-content');
+        const chevron = section.querySelector('.category-chevron');
+
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            chevron.style.transform = 'rotate(0deg)';
+            localStorage.removeItem('collapsed_' + section.dataset.categoryId);
+        } else {
+            content.style.display = 'none';
+            chevron.style.transform = 'rotate(-90deg)';
+            localStorage.setItem('collapsed_' + section.dataset.categoryId, 'true');
+        }
+    }
+
+    // Restore collapsed state on page load
+    document.querySelectorAll('.category-section').forEach(section => {
+        const categoryId = section.dataset.categoryId;
+        if (localStorage.getItem('collapsed_' + categoryId) === 'true') {
+            const content = section.querySelector('.category-content');
+            const chevron = section.querySelector('.category-chevron');
+            content.style.display = 'none';
+            chevron.style.transform = 'rotate(-90deg)';
+        }
+    });
+
+    // ========== DRAG AND DROP ==========
+    function dragStart(e) {
+        draggedElement = e.target.closest('.shortcut-card');
+        draggedElement.classList.add('opacity-50');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedElement.dataset.id);
+    }
+
+    function dragEnd(e) {
+        if (draggedElement) {
+            draggedElement.classList.remove('opacity-50');
+        }
+        document.querySelectorAll('.shortcut-card').forEach(card => {
+            card.classList.remove('border-l-4', 'border-blue-500');
+        });
+        document.querySelectorAll('.shortcuts-container').forEach(container => {
+            container.classList.remove('bg-blue-50');
+        });
+        draggedElement = null;
+    }
+
+    function dragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        const target = e.target.closest('.shortcut-card');
+        if (target && target !== draggedElement) {
+            // Show drop indicator
+            document.querySelectorAll('.shortcut-card').forEach(card => {
+                card.classList.remove('border-l-4', 'border-blue-500');
+            });
+            target.classList.add('border-l-4', 'border-blue-500');
+        }
+    }
+
+    function drop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const target = e.target.closest('.shortcut-card');
+        if (!target || !draggedElement || target === draggedElement) return;
+
+        const container = target.closest('.shortcuts-container');
+        const cards = Array.from(container.querySelectorAll('.shortcut-card'));
+        const draggedIndex = cards.indexOf(draggedElement);
+        const targetIndex = cards.indexOf(target);
+
+        // Move the dragged element
+        if (draggedIndex < targetIndex) {
+            target.parentNode.insertBefore(draggedElement, target.nextSibling);
+        } else {
+            target.parentNode.insertBefore(draggedElement, target);
+        }
+
+        // Update category if moved to different container
+        const newCategoryId = container.dataset.categoryId;
+        draggedElement.dataset.category = newCategoryId;
+
+        // Save the new order
+        saveShortcutOrder();
+    }
+
+    // Allow dropping on category containers
+    document.querySelectorAll('.shortcuts-container').forEach(container => {
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            container.classList.add('bg-blue-50');
+        });
+
+        container.addEventListener('dragleave', (e) => {
+            container.classList.remove('bg-blue-50');
+        });
+
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            container.classList.remove('bg-blue-50');
+
+            // If dropped on empty space in container (not on a card)
+            if (!e.target.closest('.shortcut-card') && draggedElement) {
+                container.appendChild(draggedElement);
+                draggedElement.dataset.category = container.dataset.categoryId;
+                saveShortcutOrder();
+            }
+        });
+    });
+
+    async function saveShortcutOrder() {
+        // Collect all shortcut IDs in their new order, grouped by category
+        const allIds = [];
+        document.querySelectorAll('.shortcuts-container').forEach(container => {
+            const categoryId = container.dataset.categoryId;
+            container.querySelectorAll('.shortcut-card').forEach(card => {
+                const shortcutId = card.dataset.id;
+                const currentCategory = card.dataset.category;
+
+                // If category changed, move it
+                if (currentCategory !== categoryId) {
+                    moveShortcutToCategory(shortcutId, categoryId);
+                }
+                allIds.push(shortcutId);
+            });
+        });
+
+        // Save order
+        try {
+            await fetch('/api/marketing/shortcuts/reorder', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({shortcut_ids: allIds})
+            });
+        } catch (error) {
+            console.error('Error saving order:', error);
+        }
+    }
+
+    async function moveShortcutToCategory(shortcutId, categoryId) {
+        try {
+            await fetch(`/api/marketing/shortcuts/${shortcutId}/move`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({category_id: categoryId})
+            });
+        } catch (error) {
+            console.error('Error moving shortcut:', error);
+        }
+    }
 
     function openShortcut(url) {
         if (!url) {

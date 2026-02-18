@@ -3447,6 +3447,8 @@ def add_marketing_shortcut(name, url='', icon='link', color='slate', category=''
     """Add a new marketing shortcut."""
     import uuid
     shortcuts = get_marketing_shortcuts()
+    # Get max order for this category
+    max_order = max([s.get('order', 0) for s in shortcuts if s.get('category') == category] or [0])
     shortcut = {
         'id': str(uuid.uuid4())[:8],
         'name': name,
@@ -3454,6 +3456,7 @@ def add_marketing_shortcut(name, url='', icon='link', color='slate', category=''
         'icon': icon,
         'color': color,
         'category': category,
+        'order': max_order + 1,
         'created_at': datetime.now().isoformat()
     }
     shortcuts.append(shortcut)
@@ -3489,6 +3492,37 @@ def delete_marketing_shortcut(shortcut_id):
     return True
 
 
+def reorder_shortcuts(shortcut_ids):
+    """Reorder shortcuts based on list of IDs. Also handles moving between categories."""
+    shortcuts = get_marketing_shortcuts()
+    shortcut_map = {s['id']: s for s in shortcuts}
+
+    # Update order based on position in the list
+    for order, shortcut_id in enumerate(shortcut_ids):
+        if shortcut_id in shortcut_map:
+            shortcut_map[shortcut_id]['order'] = order
+
+    save_marketing_shortcuts(list(shortcut_map.values()))
+    return True
+
+
+def move_shortcut_to_category(shortcut_id, new_category_id, new_order=None):
+    """Move a shortcut to a different category with optional order."""
+    shortcuts = get_marketing_shortcuts()
+    for shortcut in shortcuts:
+        if shortcut['id'] == shortcut_id:
+            shortcut['category'] = new_category_id
+            if new_order is not None:
+                shortcut['order'] = new_order
+            else:
+                # Put at end of new category
+                max_order = max([s.get('order', 0) for s in shortcuts if s.get('category') == new_category_id] or [0])
+                shortcut['order'] = max_order + 1
+            save_marketing_shortcuts(shortcuts)
+            return shortcut
+    return None
+
+
 def get_shortcuts_by_category():
     """Get shortcuts organized by category."""
     shortcuts = get_marketing_shortcuts()
@@ -3507,7 +3541,11 @@ def get_shortcuts_by_category():
             grouped[cat_name] = {'id': cat_id, 'shortcuts': [], 'order': cat_order.get(cat_id, 999)}
         grouped[cat_name]['shortcuts'].append(shortcut)
 
-    # Sort by order
+    # Sort shortcuts within each category by order
+    for cat_name in grouped:
+        grouped[cat_name]['shortcuts'].sort(key=lambda s: (s.get('order', 0), s.get('name', '')))
+
+    # Sort categories by order
     sorted_groups = sorted(grouped.items(), key=lambda x: (x[1]['order'], x[0]))
     return sorted_groups
 
