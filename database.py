@@ -3609,6 +3609,14 @@ def add_missing_shortcuts():
         {'name': 'Canva', 'icon': 'link', 'color': 'purple', 'category': cat_map.get('Tools & Resources', '')},
         {'name': 'Buffer', 'icon': 'link', 'color': 'blue', 'category': cat_map.get('Social Media', '')},
         {'name': 'CallRail', 'icon': 'link', 'color': 'green', 'category': cat_map.get('SEO & Analytics', '')},
+        # STEELSTACK Social
+        {'name': 'STEELSTACK Instagram', 'icon': 'link', 'color': 'purple', 'category': cat_map.get('Social Media', '')},
+        {'name': 'STEELSTACK Facebook', 'icon': 'meta', 'color': 'blue', 'category': cat_map.get('Social Media', '')},
+        {'name': 'STEELSTACK YouTube', 'icon': 'link', 'color': 'red', 'category': cat_map.get('Social Media', '')},
+        # Morrison Industries Social
+        {'name': 'Morrison Industries Instagram', 'icon': 'link', 'color': 'purple', 'category': cat_map.get('Social Media', '')},
+        {'name': 'Morrison Industries Facebook', 'icon': 'meta', 'color': 'blue', 'category': cat_map.get('Social Media', '')},
+        {'name': 'Morrison Industries YouTube', 'icon': 'link', 'color': 'red', 'category': cat_map.get('Social Media', '')},
     ]
 
     added = []
