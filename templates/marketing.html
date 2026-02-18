@@ -18,6 +18,23 @@
     </div>
 </div>
 
+<!-- Quick Access - SharePoint Marketing Folder -->
+{% for shortcut in shortcuts %}
+{% if shortcut.name == 'SharePoint Marketing' %}
+<div class="mb-6">
+    <a href="{{ shortcut.url or '#' }}" target="_blank"
+       class="inline-flex items-center gap-3 px-5 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium shadow-md transition-all hover:shadow-lg"
+       onclick="{% if not shortcut.url %}event.preventDefault(); openEditShortcutModal('{{ shortcut.id }}');{% endif %}">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+        </svg>
+        {{ shortcut.name }}
+        {% if not shortcut.url %}<span class="text-teal-200 text-sm">(Set URL)</span>{% endif %}
+    </a>
+</div>
+{% endif %}
+{% endfor %}
+
 <!-- Marketing Shortcuts by Category -->
 <div class="mb-8 space-y-6" id="shortcutsContainer">
     {% for cat_name, cat_data in shortcuts_by_category %}
@@ -39,6 +56,7 @@
         <div class="category-content px-4 pb-4">
             <div class="flex flex-wrap gap-4 shortcuts-container" data-category-id="{{ cat_data.id }}">
             {% for shortcut in cat_data.shortcuts %}
+            {% if shortcut.name != 'SharePoint Marketing' %}
             <div class="shortcut-card bg-gray-50 rounded-lg hover:shadow-md transition-shadow p-4 w-44 text-center cursor-grab relative group"
                  draggable="true"
                  ondragstart="dragStart(event)"
@@ -89,6 +107,7 @@
                 <p class="text-xs text-yellow-600">Set URL</p>
                 {% endif %}
             </div>
+            {% endif %}
             {% endfor %}
             </div>
         </div>
