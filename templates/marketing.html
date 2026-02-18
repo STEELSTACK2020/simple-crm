@@ -39,7 +39,7 @@
         <div class="category-content px-4 pb-4">
             <div class="flex flex-wrap gap-4 shortcuts-container" data-category-id="{{ cat_data.id }}">
             {% for shortcut in cat_data.shortcuts %}
-            <div class="shortcut-card bg-gray-50 rounded-lg hover:shadow-md transition-shadow p-4 w-36 text-center cursor-grab relative group"
+            <div class="shortcut-card bg-gray-50 rounded-lg hover:shadow-md transition-shadow p-4 w-44 text-center cursor-grab relative group"
                  draggable="true"
                  ondragstart="dragStart(event)"
                  ondragend="dragEnd(event)"
@@ -84,7 +84,7 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
                     {% endif %}
                 </div>
-                <p class="text-xs font-medium text-gray-900 truncate">{{ shortcut.name }}</p>
+                <p class="text-xs font-medium text-gray-900 leading-tight">{{ shortcut.name }}</p>
                 {% if not shortcut.url %}
                 <p class="text-xs text-yellow-600">Set URL</p>
                 {% endif %}
