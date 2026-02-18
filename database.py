@@ -3592,6 +3592,17 @@ def add_missing_shortcuts():
     # Find or create categories
     cat_map = {c['name']: c['id'] for c in categories}
 
+    # Create Content Folders category at the top (order -1 to be first)
+    if 'Content Folders' not in cat_map:
+        cat = add_marketing_category('Content Folders')
+        cat_map['Content Folders'] = cat['id']
+        # Update its order to be first
+        cats = get_marketing_categories()
+        for c in cats:
+            if c['name'] == 'Content Folders':
+                c['order'] = -1
+        save_app_setting('marketing_categories', cats)
+
     if 'Tools & Resources' not in cat_map:
         cat = add_marketing_category('Tools & Resources')
         cat_map['Tools & Resources'] = cat['id']
@@ -3601,6 +3612,12 @@ def add_missing_shortcuts():
     if 'SEO & Analytics' not in cat_map:
         cat = add_marketing_category('SEO & Analytics')
         cat_map['SEO & Analytics'] = cat['id']
+
+    # Move SharePoint Marketing to Content Folders if it exists
+    for shortcut in shortcuts:
+        if shortcut['name'] == 'SharePoint Marketing':
+            shortcut['category'] = cat_map.get('Content Folders', '')
+    save_marketing_shortcuts(shortcuts)
 
     new_shortcuts = [
         {'name': 'WordPress', 'icon': 'link', 'color': 'blue', 'category': cat_map.get('Tools & Resources', '')},
