@@ -744,8 +744,9 @@ def marketing_dashboard():
     # Get leads by month and medium from CRM data
     leads_by_month = get_leads_by_month_medium()
 
-    # Get marketing shortcuts (initialize defaults if none exist)
+    # Get marketing shortcuts (initialize defaults if none exist, add new ones)
     init_default_marketing_shortcuts()
+    add_missing_shortcuts()
     shortcuts = get_marketing_shortcuts()
     categories = get_marketing_categories()
     shortcuts_by_category = get_shortcuts_by_category()
