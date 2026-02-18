@@ -45,7 +45,9 @@ from database import (
     init_app_settings_table,
     # Marketing shortcuts
     get_marketing_shortcuts, add_marketing_shortcut, update_marketing_shortcut,
-    delete_marketing_shortcut, init_default_marketing_shortcuts
+    delete_marketing_shortcut, init_default_marketing_shortcuts,
+    get_marketing_categories, add_marketing_category, update_marketing_category,
+    delete_marketing_category, get_shortcuts_by_category
 )
 from pdf_generator import generate_quote_pdf
 from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RATE_PER_MILE
@@ -745,6 +747,8 @@ def marketing_dashboard():
     # Get marketing shortcuts (initialize defaults if none exist)
     init_default_marketing_shortcuts()
     shortcuts = get_marketing_shortcuts()
+    categories = get_marketing_categories()
+    shortcuts_by_category = get_shortcuts_by_category()
 
     return render_template('marketing.html',
                            traffic=traffic,
@@ -759,7 +763,9 @@ def marketing_dashboard():
                            period=period,
                            start_date=start_date,
                            end_date=end_date,
-                           shortcuts=shortcuts)
+                           shortcuts=shortcuts,
+                           categories=categories,
+                           shortcuts_by_category=shortcuts_by_category)
 
 
 @app.route('/marketing/settings', methods=['GET', 'POST'])
@@ -938,11 +944,12 @@ def api_add_shortcut():
     url = request.form.get('url', '').strip()
     icon = request.form.get('icon', 'link')
     color = request.form.get('color', 'slate')
+    category = request.form.get('category', '')
 
     if not name:
         return jsonify({'success': False, 'error': 'Name is required'}), 400
 
-    shortcut = add_marketing_shortcut(name, url, icon, color)
+    shortcut = add_marketing_shortcut(name, url, icon, color, category)
     return jsonify({'success': True, 'shortcut': shortcut})
 
 
@@ -954,8 +961,9 @@ def api_update_shortcut(shortcut_id):
     url = request.form.get('url', '').strip()
     icon = request.form.get('icon')
     color = request.form.get('color')
+    category = request.form.get('category')
 
-    shortcut = update_marketing_shortcut(shortcut_id, name=name, url=url, icon=icon, color=color)
+    shortcut = update_marketing_shortcut(shortcut_id, name=name, url=url, icon=icon, color=color, category=category)
     if shortcut:
         return jsonify({'success': True, 'shortcut': shortcut})
     return jsonify({'success': False, 'error': 'Shortcut not found'}), 404
@@ -966,6 +974,37 @@ def api_update_shortcut(shortcut_id):
 def api_delete_shortcut(shortcut_id):
     """Delete a marketing shortcut."""
     delete_marketing_shortcut(shortcut_id)
+    return jsonify({'success': True})
+
+
+@app.route('/api/marketing/categories', methods=['POST'])
+@login_required
+def api_add_category():
+    """Add a new marketing category."""
+    name = request.form.get('name', '').strip()
+    if not name:
+        return jsonify({'success': False, 'error': 'Name is required'}), 400
+
+    category = add_marketing_category(name)
+    return jsonify({'success': True, 'category': category})
+
+
+@app.route('/api/marketing/categories/<category_id>', methods=['PUT'])
+@login_required
+def api_update_category(category_id):
+    """Update a marketing category."""
+    name = request.form.get('name', '').strip()
+    category = update_marketing_category(category_id, name=name)
+    if category:
+        return jsonify({'success': True, 'category': category})
+    return jsonify({'success': False, 'error': 'Category not found'}), 404
+
+
+@app.route('/api/marketing/categories/<category_id>', methods=['DELETE'])
+@login_required
+def api_delete_category(category_id):
+    """Delete a marketing category."""
+    delete_marketing_category(category_id)
     return jsonify({'success': True})
 
 

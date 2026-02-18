@@ -9,61 +9,76 @@
         <p class="mt-2 text-gray-600">Quick access to your marketing tools and analytics</p>
     </div>
     <div class="flex items-center gap-3">
+        <button onclick="openAddCategoryModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">
+            + Add Category
+        </button>
         <button onclick="openAddShortcutModal()" class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium text-sm">
             + Add Shortcut
         </button>
     </div>
 </div>
 
-<!-- Marketing Shortcuts -->
-<div class="mb-8">
-    <div class="flex flex-wrap gap-4" id="shortcutsContainer">
-        {% for shortcut in shortcuts %}
-        <div class="shortcut-card bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-4 w-40 text-center cursor-pointer relative group"
-             onclick="openShortcut('{{ shortcut.url }}')" data-id="{{ shortcut.id }}">
-            <!-- Edit button -->
-            <button onclick="event.stopPropagation(); openEditShortcutModal('{{ shortcut.id }}')"
-                    class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
+<!-- Marketing Shortcuts by Category -->
+<div class="mb-8 space-y-6">
+    {% for cat_name, cat_data in shortcuts_by_category %}
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-semibold text-gray-800">{{ cat_name }}</h3>
+            {% if cat_data.id %}
+            <button onclick="openEditCategoryModal('{{ cat_data.id }}', '{{ cat_name }}')" class="text-gray-400 hover:text-gray-600 text-sm">
+                Edit Category
             </button>
-            <!-- Icon -->
-            <div class="w-12 h-12 mx-auto mb-2 rounded-lg flex items-center justify-center
-                {% if shortcut.color == 'blue' %}bg-blue-100 text-blue-600
-                {% elif shortcut.color == 'green' %}bg-green-100 text-green-600
-                {% elif shortcut.color == 'red' %}bg-red-100 text-red-600
-                {% elif shortcut.color == 'yellow' %}bg-yellow-100 text-yellow-600
-                {% elif shortcut.color == 'orange' %}bg-orange-100 text-orange-600
-                {% elif shortcut.color == 'purple' %}bg-purple-100 text-purple-600
-                {% elif shortcut.color == 'teal' %}bg-teal-100 text-teal-600
-                {% else %}bg-slate-100 text-slate-600{% endif %}">
-                {% if shortcut.icon == 'google' %}
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                {% elif shortcut.icon == 'microsoft' %}
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z"/></svg>
-                {% elif shortcut.icon == 'meta' %}
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
-                {% elif shortcut.icon == 'chart' %}
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                {% elif shortcut.icon == 'search' %}
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                {% elif shortcut.icon == 'shield' %}
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                {% elif shortcut.icon == 'folder' %}
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-                {% else %}
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-                {% endif %}
-            </div>
-            <p class="text-sm font-medium text-gray-900 truncate">{{ shortcut.name }}</p>
-            {% if not shortcut.url %}
-            <p class="text-xs text-yellow-600">Click to set URL</p>
             {% endif %}
         </div>
-        {% endfor %}
+        <div class="flex flex-wrap gap-4">
+            {% for shortcut in cat_data.shortcuts %}
+            <div class="shortcut-card bg-gray-50 rounded-lg hover:shadow-md transition-shadow p-4 w-36 text-center cursor-pointer relative group"
+                 onclick="openShortcut('{{ shortcut.url }}')" data-id="{{ shortcut.id }}">
+                <!-- Edit button -->
+                <button onclick="event.stopPropagation(); openEditShortcutModal('{{ shortcut.id }}')"
+                        class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+                <!-- Icon -->
+                <div class="w-10 h-10 mx-auto mb-2 rounded-lg flex items-center justify-center
+                    {% if shortcut.color == 'blue' %}bg-blue-100 text-blue-600
+                    {% elif shortcut.color == 'green' %}bg-green-100 text-green-600
+                    {% elif shortcut.color == 'red' %}bg-red-100 text-red-600
+                    {% elif shortcut.color == 'yellow' %}bg-yellow-100 text-yellow-600
+                    {% elif shortcut.color == 'orange' %}bg-orange-100 text-orange-600
+                    {% elif shortcut.color == 'purple' %}bg-purple-100 text-purple-600
+                    {% elif shortcut.color == 'teal' %}bg-teal-100 text-teal-600
+                    {% else %}bg-slate-100 text-slate-600{% endif %}">
+                    {% if shortcut.icon == 'google' %}
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    {% elif shortcut.icon == 'microsoft' %}
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z"/></svg>
+                    {% elif shortcut.icon == 'meta' %}
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
+                    {% elif shortcut.icon == 'chart' %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    {% elif shortcut.icon == 'search' %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    {% elif shortcut.icon == 'shield' %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    {% elif shortcut.icon == 'folder' %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                    {% else %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    {% endif %}
+                </div>
+                <p class="text-xs font-medium text-gray-900 truncate">{{ shortcut.name }}</p>
+                {% if not shortcut.url %}
+                <p class="text-xs text-yellow-600">Set URL</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
     </div>
+    {% endfor %}
 </div>
 
 <!-- Website Traffic Section -->
@@ -923,6 +938,7 @@
         document.getElementById('shortcutId').value = '';
         document.getElementById('shortcutName').value = '';
         document.getElementById('shortcutUrl').value = '';
+        document.getElementById('shortcutCategory').value = '';
         document.getElementById('shortcutIcon').value = 'link';
         document.getElementById('shortcutColor').value = 'slate';
         document.getElementById('deleteShortcutBtn').classList.add('hidden');
@@ -937,6 +953,7 @@
         document.getElementById('shortcutId').value = shortcut.id;
         document.getElementById('shortcutName').value = shortcut.name;
         document.getElementById('shortcutUrl').value = shortcut.url || '';
+        document.getElementById('shortcutCategory').value = shortcut.category || '';
         document.getElementById('shortcutIcon').value = shortcut.icon || 'link';
         document.getElementById('shortcutColor').value = shortcut.color || 'slate';
         document.getElementById('deleteShortcutBtn').classList.remove('hidden');
@@ -951,6 +968,7 @@
         const id = document.getElementById('shortcutId').value;
         const name = document.getElementById('shortcutName').value.trim();
         const url = document.getElementById('shortcutUrl').value.trim();
+        const category = document.getElementById('shortcutCategory').value;
         const icon = document.getElementById('shortcutIcon').value;
         const color = document.getElementById('shortcutColor').value;
 
@@ -962,6 +980,7 @@
         const formData = new FormData();
         formData.append('name', name);
         formData.append('url', url);
+        formData.append('category', category);
         formData.append('icon', icon);
         formData.append('color', color);
 
@@ -1006,6 +1025,83 @@
             alert('Error deleting shortcut');
         }
     }
+
+    // ========== CATEGORY MANAGEMENT ==========
+    let categoriesData = {{ categories | tojson }};
+
+    function openAddCategoryModal() {
+        document.getElementById('categoryModalTitle').textContent = 'Add Category';
+        document.getElementById('categoryId').value = '';
+        document.getElementById('categoryName').value = '';
+        document.getElementById('deleteCategoryBtn').classList.add('hidden');
+        document.getElementById('categoryModal').classList.remove('hidden');
+    }
+
+    function openEditCategoryModal(id, name) {
+        document.getElementById('categoryModalTitle').textContent = 'Edit Category';
+        document.getElementById('categoryId').value = id;
+        document.getElementById('categoryName').value = name;
+        document.getElementById('deleteCategoryBtn').classList.remove('hidden');
+        document.getElementById('categoryModal').classList.remove('hidden');
+    }
+
+    function closeCategoryModal() {
+        document.getElementById('categoryModal').classList.add('hidden');
+    }
+
+    async function saveCategory() {
+        const id = document.getElementById('categoryId').value;
+        const name = document.getElementById('categoryName').value.trim();
+
+        if (!name) {
+            alert('Please enter a category name');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('name', name);
+
+        const endpoint = id ? `/api/marketing/categories/${id}` : '/api/marketing/categories';
+        const method = id ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(endpoint, {
+                method: method,
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success) {
+                window.location.reload();
+            } else {
+                alert(result.error || 'Error saving category');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error saving category');
+        }
+    }
+
+    async function deleteCategory() {
+        const id = document.getElementById('categoryId').value;
+        if (!id) return;
+
+        if (!confirm('Delete this category? Shortcuts in this category will become uncategorized.')) return;
+
+        try {
+            const response = await fetch(`/api/marketing/categories/${id}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            if (result.success) {
+                window.location.reload();
+            } else {
+                alert(result.error || 'Error deleting category');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error deleting category');
+        }
+    }
 </script>
 
 <!-- Shortcut Modal -->
@@ -1028,6 +1124,15 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">URL</label>
                 <input type="url" id="shortcutUrl" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-700" placeholder="https://ads.google.com">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select id="shortcutCategory" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    <option value="">Uncategorized</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -1067,6 +1172,40 @@
                     Cancel
                 </button>
                 <button onclick="saveShortcut()" class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Modal -->
+<div id="categoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <h3 id="categoryModalTitle" class="text-lg font-semibold">Add Category</h3>
+            <button onclick="closeCategoryModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <input type="hidden" id="categoryId">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
+                <input type="text" id="categoryName" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-700" placeholder="Ads Management">
+            </div>
+        </div>
+        <div class="px-6 py-4 border-t flex justify-between">
+            <button id="deleteCategoryBtn" onclick="deleteCategory()" class="hidden px-4 py-2 text-red-600 hover:text-red-800 font-medium">
+                Delete Category
+            </button>
+            <div class="flex gap-3 ml-auto">
+                <button onclick="closeCategoryModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                    Cancel
+                </button>
+                <button onclick="saveCategory()" class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">
                     Save
                 </button>
             </div>

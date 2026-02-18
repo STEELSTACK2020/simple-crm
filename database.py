@@ -3384,7 +3384,66 @@ def save_marketing_shortcuts(shortcuts):
     save_app_setting('marketing_shortcuts', shortcuts)
 
 
-def add_marketing_shortcut(name, url='', icon='link', color='slate'):
+def get_marketing_categories():
+    """Get all marketing categories."""
+    categories = get_app_setting('marketing_categories')
+    if not categories:
+        return []
+    return categories
+
+
+def save_marketing_categories(categories):
+    """Save all marketing categories."""
+    save_app_setting('marketing_categories', categories)
+
+
+def add_marketing_category(name):
+    """Add a new marketing category."""
+    import uuid
+    categories = get_marketing_categories()
+    # Check if category already exists
+    for cat in categories:
+        if cat['name'].lower() == name.lower():
+            return cat
+    category = {
+        'id': str(uuid.uuid4())[:8],
+        'name': name,
+        'order': len(categories)
+    }
+    categories.append(category)
+    save_marketing_categories(categories)
+    return category
+
+
+def update_marketing_category(category_id, name=None, order=None):
+    """Update a marketing category."""
+    categories = get_marketing_categories()
+    for category in categories:
+        if category['id'] == category_id:
+            if name is not None:
+                category['name'] = name
+            if order is not None:
+                category['order'] = order
+            save_marketing_categories(categories)
+            return category
+    return None
+
+
+def delete_marketing_category(category_id):
+    """Delete a marketing category and move its shortcuts to Uncategorized."""
+    categories = get_marketing_categories()
+    categories = [c for c in categories if c['id'] != category_id]
+    save_marketing_categories(categories)
+    # Move shortcuts in this category to no category
+    shortcuts = get_marketing_shortcuts()
+    for shortcut in shortcuts:
+        if shortcut.get('category') == category_id:
+            shortcut['category'] = ''
+    save_marketing_shortcuts(shortcuts)
+    return True
+
+
+def add_marketing_shortcut(name, url='', icon='link', color='slate', category=''):
     """Add a new marketing shortcut."""
     import uuid
     shortcuts = get_marketing_shortcuts()
@@ -3394,6 +3453,7 @@ def add_marketing_shortcut(name, url='', icon='link', color='slate'):
         'url': url,
         'icon': icon,
         'color': color,
+        'category': category,
         'created_at': datetime.now().isoformat()
     }
     shortcuts.append(shortcut)
@@ -3401,7 +3461,7 @@ def add_marketing_shortcut(name, url='', icon='link', color='slate'):
     return shortcut
 
 
-def update_marketing_shortcut(shortcut_id, name=None, url=None, icon=None, color=None):
+def update_marketing_shortcut(shortcut_id, name=None, url=None, icon=None, color=None, category=None):
     """Update a marketing shortcut."""
     shortcuts = get_marketing_shortcuts()
     for shortcut in shortcuts:
@@ -3414,6 +3474,8 @@ def update_marketing_shortcut(shortcut_id, name=None, url=None, icon=None, color
                 shortcut['icon'] = icon
             if color is not None:
                 shortcut['color'] = color
+            if category is not None:
+                shortcut['category'] = category
             save_marketing_shortcuts(shortcuts)
             return shortcut
     return None
@@ -3427,25 +3489,54 @@ def delete_marketing_shortcut(shortcut_id):
     return True
 
 
+def get_shortcuts_by_category():
+    """Get shortcuts organized by category."""
+    shortcuts = get_marketing_shortcuts()
+    categories = get_marketing_categories()
+
+    # Create a dict of category_id -> category_name
+    cat_map = {c['id']: c['name'] for c in categories}
+    cat_order = {c['id']: c.get('order', 0) for c in categories}
+
+    # Group shortcuts by category
+    grouped = {}
+    for shortcut in shortcuts:
+        cat_id = shortcut.get('category', '')
+        cat_name = cat_map.get(cat_id, 'Uncategorized') if cat_id else 'Uncategorized'
+        if cat_name not in grouped:
+            grouped[cat_name] = {'id': cat_id, 'shortcuts': [], 'order': cat_order.get(cat_id, 999)}
+        grouped[cat_name]['shortcuts'].append(shortcut)
+
+    # Sort by order
+    sorted_groups = sorted(grouped.items(), key=lambda x: (x[1]['order'], x[0]))
+    return sorted_groups
+
+
 def init_default_marketing_shortcuts():
     """Initialize default marketing shortcuts if none exist."""
     shortcuts = get_marketing_shortcuts()
     if shortcuts:
         return  # Already have shortcuts
 
+    # Create default categories
+    ads_cat = add_marketing_category('Ads Management')
+    seo_cat = add_marketing_category('SEO & Analytics')
+    social_cat = add_marketing_category('Social Media')
+    tools_cat = add_marketing_category('Tools & Resources')
+
     defaults = [
-        {'name': 'Google Ads', 'icon': 'google', 'color': 'blue'},
-        {'name': 'Google Analytics', 'icon': 'chart', 'color': 'yellow'},
-        {'name': 'Bing Ads', 'icon': 'microsoft', 'color': 'blue'},
-        {'name': 'Bing Webmaster', 'icon': 'search', 'color': 'green'},
-        {'name': 'Meta Business Suite', 'icon': 'meta', 'color': 'blue'},
-        {'name': 'ClickCease', 'icon': 'shield', 'color': 'red'},
-        {'name': 'Ubersuggest', 'icon': 'chart', 'color': 'orange'},
-        {'name': 'SharePoint Marketing', 'icon': 'folder', 'color': 'teal'},
+        {'name': 'Google Ads', 'icon': 'google', 'color': 'blue', 'category': ads_cat['id']},
+        {'name': 'Bing Ads', 'icon': 'microsoft', 'color': 'blue', 'category': ads_cat['id']},
+        {'name': 'ClickCease', 'icon': 'shield', 'color': 'red', 'category': ads_cat['id']},
+        {'name': 'Google Analytics', 'icon': 'chart', 'color': 'yellow', 'category': seo_cat['id']},
+        {'name': 'Bing Webmaster', 'icon': 'search', 'color': 'green', 'category': seo_cat['id']},
+        {'name': 'Ubersuggest', 'icon': 'chart', 'color': 'orange', 'category': seo_cat['id']},
+        {'name': 'Meta Business Suite', 'icon': 'meta', 'color': 'blue', 'category': social_cat['id']},
+        {'name': 'SharePoint Marketing', 'icon': 'folder', 'color': 'teal', 'category': tools_cat['id']},
     ]
 
     for d in defaults:
-        add_marketing_shortcut(d['name'], '', d['icon'], d['color'])
+        add_marketing_shortcut(d['name'], '', d['icon'], d['color'], d['category'])
 
 
 if __name__ == "__main__":
