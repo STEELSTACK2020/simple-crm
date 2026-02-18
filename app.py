@@ -47,7 +47,7 @@ from database import (
     get_marketing_shortcuts, add_marketing_shortcut, update_marketing_shortcut,
     delete_marketing_shortcut, init_default_marketing_shortcuts,
     get_marketing_categories, add_marketing_category, update_marketing_category,
-    delete_marketing_category, get_shortcuts_by_category
+    delete_marketing_category, get_shortcuts_by_category, add_missing_shortcuts
 )
 from pdf_generator import generate_quote_pdf
 from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RATE_PER_MILE
@@ -1006,6 +1006,14 @@ def api_delete_category(category_id):
     """Delete a marketing category."""
     delete_marketing_category(category_id)
     return jsonify({'success': True})
+
+
+@app.route('/api/marketing/shortcuts/add-missing', methods=['POST'])
+@login_required
+def api_add_missing_shortcuts():
+    """Add new shortcuts that don't exist yet."""
+    added = add_missing_shortcuts()
+    return jsonify({'success': True, 'added': added})
 
 
 # ============== Email Settings Routes ==============

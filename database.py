@@ -3531,12 +3531,55 @@ def init_default_marketing_shortcuts():
         {'name': 'Google Analytics', 'icon': 'chart', 'color': 'yellow', 'category': seo_cat['id']},
         {'name': 'Bing Webmaster', 'icon': 'search', 'color': 'green', 'category': seo_cat['id']},
         {'name': 'Ubersuggest', 'icon': 'chart', 'color': 'orange', 'category': seo_cat['id']},
+        {'name': 'CallRail', 'icon': 'link', 'color': 'green', 'category': seo_cat['id']},
         {'name': 'Meta Business Suite', 'icon': 'meta', 'color': 'blue', 'category': social_cat['id']},
+        {'name': 'Buffer', 'icon': 'link', 'color': 'blue', 'category': social_cat['id']},
         {'name': 'SharePoint Marketing', 'icon': 'folder', 'color': 'teal', 'category': tools_cat['id']},
+        {'name': 'WordPress', 'icon': 'link', 'color': 'blue', 'category': tools_cat['id']},
+        {'name': 'Squarespace', 'icon': 'link', 'color': 'slate', 'category': tools_cat['id']},
+        {'name': 'Shopify', 'icon': 'link', 'color': 'green', 'category': tools_cat['id']},
+        {'name': 'Canva', 'icon': 'link', 'color': 'purple', 'category': tools_cat['id']},
     ]
 
     for d in defaults:
         add_marketing_shortcut(d['name'], '', d['icon'], d['color'], d['category'])
+
+
+def add_missing_shortcuts():
+    """Add new shortcuts to existing installations."""
+    shortcuts = get_marketing_shortcuts()
+    existing_names = {s['name'] for s in shortcuts}
+    categories = get_marketing_categories()
+
+    # Find or create categories
+    cat_map = {c['name']: c['id'] for c in categories}
+
+    if 'Tools & Resources' not in cat_map:
+        cat = add_marketing_category('Tools & Resources')
+        cat_map['Tools & Resources'] = cat['id']
+    if 'Social Media' not in cat_map:
+        cat = add_marketing_category('Social Media')
+        cat_map['Social Media'] = cat['id']
+    if 'SEO & Analytics' not in cat_map:
+        cat = add_marketing_category('SEO & Analytics')
+        cat_map['SEO & Analytics'] = cat['id']
+
+    new_shortcuts = [
+        {'name': 'WordPress', 'icon': 'link', 'color': 'blue', 'category': cat_map.get('Tools & Resources', '')},
+        {'name': 'Squarespace', 'icon': 'link', 'color': 'slate', 'category': cat_map.get('Tools & Resources', '')},
+        {'name': 'Shopify', 'icon': 'link', 'color': 'green', 'category': cat_map.get('Tools & Resources', '')},
+        {'name': 'Canva', 'icon': 'link', 'color': 'purple', 'category': cat_map.get('Tools & Resources', '')},
+        {'name': 'Buffer', 'icon': 'link', 'color': 'blue', 'category': cat_map.get('Social Media', '')},
+        {'name': 'CallRail', 'icon': 'link', 'color': 'green', 'category': cat_map.get('SEO & Analytics', '')},
+    ]
+
+    added = []
+    for s in new_shortcuts:
+        if s['name'] not in existing_names:
+            add_marketing_shortcut(s['name'], '', s['icon'], s['color'], s['category'])
+            added.append(s['name'])
+
+    return added
 
 
 if __name__ == "__main__":
