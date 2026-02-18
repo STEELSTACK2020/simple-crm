@@ -3369,5 +3369,84 @@ def delete_app_setting(key):
     conn.close()
 
 
+# ============== Marketing Shortcuts ==============
+
+def get_marketing_shortcuts():
+    """Get all marketing shortcuts."""
+    shortcuts = get_app_setting('marketing_shortcuts')
+    if not shortcuts:
+        return []
+    return shortcuts
+
+
+def save_marketing_shortcuts(shortcuts):
+    """Save all marketing shortcuts."""
+    save_app_setting('marketing_shortcuts', shortcuts)
+
+
+def add_marketing_shortcut(name, url='', icon='link', color='slate'):
+    """Add a new marketing shortcut."""
+    import uuid
+    shortcuts = get_marketing_shortcuts()
+    shortcut = {
+        'id': str(uuid.uuid4())[:8],
+        'name': name,
+        'url': url,
+        'icon': icon,
+        'color': color,
+        'created_at': datetime.now().isoformat()
+    }
+    shortcuts.append(shortcut)
+    save_marketing_shortcuts(shortcuts)
+    return shortcut
+
+
+def update_marketing_shortcut(shortcut_id, name=None, url=None, icon=None, color=None):
+    """Update a marketing shortcut."""
+    shortcuts = get_marketing_shortcuts()
+    for shortcut in shortcuts:
+        if shortcut['id'] == shortcut_id:
+            if name is not None:
+                shortcut['name'] = name
+            if url is not None:
+                shortcut['url'] = url
+            if icon is not None:
+                shortcut['icon'] = icon
+            if color is not None:
+                shortcut['color'] = color
+            save_marketing_shortcuts(shortcuts)
+            return shortcut
+    return None
+
+
+def delete_marketing_shortcut(shortcut_id):
+    """Delete a marketing shortcut."""
+    shortcuts = get_marketing_shortcuts()
+    shortcuts = [s for s in shortcuts if s['id'] != shortcut_id]
+    save_marketing_shortcuts(shortcuts)
+    return True
+
+
+def init_default_marketing_shortcuts():
+    """Initialize default marketing shortcuts if none exist."""
+    shortcuts = get_marketing_shortcuts()
+    if shortcuts:
+        return  # Already have shortcuts
+
+    defaults = [
+        {'name': 'Google Ads', 'icon': 'google', 'color': 'blue'},
+        {'name': 'Google Analytics', 'icon': 'chart', 'color': 'yellow'},
+        {'name': 'Bing Ads', 'icon': 'microsoft', 'color': 'blue'},
+        {'name': 'Bing Webmaster', 'icon': 'search', 'color': 'green'},
+        {'name': 'Meta Business Suite', 'icon': 'meta', 'color': 'blue'},
+        {'name': 'ClickCease', 'icon': 'shield', 'color': 'red'},
+        {'name': 'Ubersuggest', 'icon': 'chart', 'color': 'orange'},
+        {'name': 'SharePoint Marketing', 'icon': 'folder', 'color': 'teal'},
+    ]
+
+    for d in defaults:
+        add_marketing_shortcut(d['name'], '', d['icon'], d['color'])
+
+
 if __name__ == "__main__":
     init_database()

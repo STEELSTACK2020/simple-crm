@@ -42,7 +42,10 @@ from database import (
     add_user_salesperson_column, get_salesperson_for_user,
     get_users_with_email_connected,
     # App settings
-    init_app_settings_table
+    init_app_settings_table,
+    # Marketing shortcuts
+    get_marketing_shortcuts, add_marketing_shortcut, update_marketing_shortcut,
+    delete_marketing_shortcut, init_default_marketing_shortcuts
 )
 from pdf_generator import generate_quote_pdf
 from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RATE_PER_MILE
@@ -671,11 +674,11 @@ def export_contacts():
     return send_file(csv_bytes, mimetype='text/csv', as_attachment=True, download_name=filename)
 
 
-# ============== Traffic Dashboard Routes ==============
+# ============== Marketing Dashboard Routes ==============
 
-@app.route('/traffic')
+@app.route('/marketing')
 @login_required
-def traffic_dashboard():
+def marketing_dashboard():
     """Traffic dashboard with website analytics from GA4."""
     from flask import session
 
@@ -739,7 +742,11 @@ def traffic_dashboard():
     # Get leads by month and medium from CRM data
     leads_by_month = get_leads_by_month_medium()
 
-    return render_template('traffic.html',
+    # Get marketing shortcuts (initialize defaults if none exist)
+    init_default_marketing_shortcuts()
+    shortcuts = get_marketing_shortcuts()
+
+    return render_template('marketing.html',
                            traffic=traffic,
                            traffic_by_month=traffic_by_month,
                            leads_by_month=leads_by_month,
@@ -751,12 +758,13 @@ def traffic_dashboard():
                            current_website=current_website,
                            period=period,
                            start_date=start_date,
-                           end_date=end_date)
+                           end_date=end_date,
+                           shortcuts=shortcuts)
 
 
-@app.route('/traffic/settings', methods=['GET', 'POST'])
+@app.route('/marketing/settings', methods=['GET', 'POST'])
 @login_required
-def traffic_settings():
+def marketing_settings():
     """Configure Google Analytics OAuth connection."""
     error = None
     success = None
@@ -778,7 +786,7 @@ def traffic_settings():
     oauth_secrets = get_oauth_secrets() if oauth_configured else None
     websites = get_websites() if ga_connected else []
 
-    return render_template('traffic_settings.html',
+    return render_template('marketing_settings.html',
                            oauth_configured=oauth_configured,
                            ga_connected=ga_connected,
                            config=config,
@@ -788,19 +796,19 @@ def traffic_settings():
                            success=success)
 
 
-@app.route('/traffic/oauth/authorize')
+@app.route('/marketing/oauth/authorize')
 @login_required
-def traffic_oauth_authorize():
+def marketing_oauth_authorize():
     """Start OAuth flow - redirect to Google login."""
     if not is_oauth_configured():
-        return redirect(url_for('traffic_settings'))
+        return redirect(url_for('marketing_settings'))
 
     # Build redirect URI dynamically for local vs Railway
     railway_url = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
     if railway_url:
-        redirect_uri = f"https://{railway_url}/traffic/oauth/callback"
+        redirect_uri = f"https://{railway_url}/marketing/oauth/callback"
     else:
-        redirect_uri = 'http://localhost:5000/traffic/oauth/callback'
+        redirect_uri = 'http://localhost:5000/marketing/oauth/callback'
 
     flow = get_oauth_flow(redirect_uri=redirect_uri)
     if not flow:
@@ -820,21 +828,21 @@ def traffic_oauth_authorize():
     return redirect(authorization_url)
 
 
-@app.route('/traffic/oauth/callback')
+@app.route('/marketing/oauth/callback')
 @login_required
-def traffic_oauth_callback():
+def marketing_oauth_callback():
     """Handle OAuth callback from Google."""
     from flask import session
 
     if not is_oauth_configured():
-        return redirect(url_for('traffic_settings'))
+        return redirect(url_for('marketing_settings'))
 
     # Build redirect URI dynamically for local vs Railway
     railway_url = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
     if railway_url:
-        redirect_uri = f"https://{railway_url}/traffic/oauth/callback"
+        redirect_uri = f"https://{railway_url}/marketing/oauth/callback"
     else:
-        redirect_uri = 'http://localhost:5000/traffic/oauth/callback'
+        redirect_uri = 'http://localhost:5000/marketing/oauth/callback'
 
     flow = get_oauth_flow(redirect_uri=redirect_uri)
     if not flow:
@@ -852,15 +860,15 @@ def traffic_oauth_callback():
     save_oauth_token(credentials)
 
     # Redirect to property selection
-    return redirect(url_for('traffic_select_property'))
+    return redirect(url_for('marketing_select_property'))
 
 
-@app.route('/traffic/select-property', methods=['GET', 'POST'])
+@app.route('/marketing/select-property', methods=['GET', 'POST'])
 @login_required
-def traffic_select_property():
+def marketing_select_property():
     """Select which GA4 property to use."""
     if not is_oauth_configured():
-        return redirect(url_for('traffic_settings'))
+        return redirect(url_for('marketing_settings'))
 
     error = None
 
@@ -868,26 +876,26 @@ def traffic_select_property():
         property_id = request.form.get('property_id', '').strip()
         if property_id:
             save_ga_config(property_id)
-            return redirect(url_for('traffic_dashboard'))
+            return redirect(url_for('marketing_dashboard'))
         else:
             error = "Please enter a Property ID"
 
     # For now, just show a form to enter property ID manually
     # (fetching properties list requires additional API setup)
-    return render_template('traffic_select_property.html', error=error)
+    return render_template('marketing_select_property.html', error=error)
 
 
-@app.route('/traffic/disconnect', methods=['POST'])
+@app.route('/marketing/disconnect', methods=['POST'])
 @login_required
-def traffic_disconnect():
+def marketing_disconnect():
     """Disconnect Google Analytics."""
     disconnect_ga()
-    return redirect(url_for('traffic_settings'))
+    return redirect(url_for('marketing_settings'))
 
 
-@app.route('/traffic/websites/add', methods=['POST'])
+@app.route('/marketing/websites/add', methods=['POST'])
 @login_required
-def traffic_add_website():
+def marketing_add_website():
     """Add a new website to track."""
     name = request.form.get('name', '').strip()
     property_id = request.form.get('property_id', '').strip()
@@ -895,20 +903,20 @@ def traffic_add_website():
     if name and property_id:
         add_website(name, property_id)
 
-    return redirect(url_for('traffic_settings'))
+    return redirect(url_for('marketing_settings'))
 
 
-@app.route('/traffic/websites/<website_id>/remove', methods=['POST'])
+@app.route('/marketing/websites/<website_id>/remove', methods=['POST'])
 @login_required
-def traffic_remove_website(website_id):
+def marketing_remove_website(website_id):
     """Remove a website from tracking."""
     remove_website(website_id)
-    return redirect(url_for('traffic_settings'))
+    return redirect(url_for('marketing_settings'))
 
 
-@app.route('/traffic/test')
+@app.route('/marketing/test')
 @login_required
-def traffic_test():
+def marketing_test():
     """Test GA4 connection."""
     if not is_ga_connected():
         return jsonify({'error': 'Google Analytics not connected'}), 400
@@ -918,6 +926,47 @@ def traffic_test():
         return jsonify({'success': True, 'data': traffic})
     else:
         return jsonify({'success': False, 'error': traffic.get('error', 'Unknown error')}), 500
+
+
+# ============== Marketing Shortcuts API ==============
+
+@app.route('/api/marketing/shortcuts', methods=['POST'])
+@login_required
+def api_add_shortcut():
+    """Add a new marketing shortcut."""
+    name = request.form.get('name', '').strip()
+    url = request.form.get('url', '').strip()
+    icon = request.form.get('icon', 'link')
+    color = request.form.get('color', 'slate')
+
+    if not name:
+        return jsonify({'success': False, 'error': 'Name is required'}), 400
+
+    shortcut = add_marketing_shortcut(name, url, icon, color)
+    return jsonify({'success': True, 'shortcut': shortcut})
+
+
+@app.route('/api/marketing/shortcuts/<shortcut_id>', methods=['PUT'])
+@login_required
+def api_update_shortcut(shortcut_id):
+    """Update a marketing shortcut."""
+    name = request.form.get('name', '').strip()
+    url = request.form.get('url', '').strip()
+    icon = request.form.get('icon')
+    color = request.form.get('color')
+
+    shortcut = update_marketing_shortcut(shortcut_id, name=name, url=url, icon=icon, color=color)
+    if shortcut:
+        return jsonify({'success': True, 'shortcut': shortcut})
+    return jsonify({'success': False, 'error': 'Shortcut not found'}), 404
+
+
+@app.route('/api/marketing/shortcuts/<shortcut_id>', methods=['DELETE'])
+@login_required
+def api_delete_shortcut(shortcut_id):
+    """Delete a marketing shortcut."""
+    delete_marketing_shortcut(shortcut_id)
+    return jsonify({'success': True})
 
 
 # ============== Email Settings Routes ==============
@@ -2516,7 +2565,7 @@ if __name__ == '__main__':
     print("Contacts:  http://localhost:5000/contacts")
     print("Products:  http://localhost:5000/products")
     print("Quotes:    http://localhost:5000/quotes")
-    print("Traffic:   http://localhost:5000/traffic")
+    print("Marketing: http://localhost:5000/marketing")
     print("\nAPI Endpoints:")
     print("  GET/POST   /api/contacts")
     print("  GET/PUT/DELETE /api/contacts/<id>")
