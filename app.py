@@ -15,7 +15,7 @@ from database import (
     get_all_contacts, search_contacts, delete_contact, get_contacts_count, get_contacts_by_date_range,
     get_analytics, set_deal_value, get_year_comparison,
     get_leads_by_month_medium, get_deals_for_contact,
-    update_contact_activity, get_untouched_leads,
+    update_contact_activity, get_untouched_leads, sync_utm_from_contact_to_deals,
     # Deal functions
     DEAL_STAGES, add_deal, update_deal, update_deal_stage, get_deal,
     get_all_deals, get_deals_by_stage, delete_deal,
@@ -460,6 +460,8 @@ def contact_edit(contact_id):
             'sales_notes': request.form.get('sales_notes'),
         }
         update_contact(contact_id, **update_data)
+        # Sync UTM fields to any associated deals
+        sync_utm_from_contact_to_deals(contact_id)
         return redirect(url_for('contact_detail', contact_id=contact_id))
 
     return render_template('contact_edit.html', contact=contact, companies=get_all_companies(), mediums=get_utm_mediums(), salespeople=get_salespeople())

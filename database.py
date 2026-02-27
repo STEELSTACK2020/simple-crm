@@ -609,6 +609,45 @@ def update_contact(contact_id, **kwargs):
     return {"success": True, "updated": cursor.rowcount}
 
 
+def sync_utm_from_contact_to_deals(contact_id):
+    """Sync UTM fields from a contact to all associated deals."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Get the contact's UTM fields
+    cursor.execute("""
+        SELECT utm_source, utm_medium, utm_campaign
+        FROM contacts WHERE id = ?
+    """, (contact_id,))
+    contact = cursor.fetchone()
+
+    if not contact:
+        conn.close()
+        return {"success": False, "error": "Contact not found"}
+
+    utm_source = contact['utm_source']
+    utm_medium = contact['utm_medium']
+    utm_campaign = contact['utm_campaign']
+
+    # Update all deals linked to this contact
+    cursor.execute("""
+        UPDATE deals
+        SET utm_source = ?,
+            utm_medium = ?,
+            utm_campaign = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id IN (
+            SELECT deal_id FROM deal_contacts WHERE contact_id = ?
+        )
+    """, (utm_source, utm_medium, utm_campaign, contact_id))
+
+    updated_count = cursor.rowcount
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "deals_updated": updated_count}
+
+
 def set_deal_value(contact_id, deal_value):
     """Set a deal value for a contact (when they close a deal)."""
     return update_contact(
