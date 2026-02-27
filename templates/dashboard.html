@@ -383,19 +383,37 @@ function applyMonthFilter() {
     <div class="flex flex-wrap justify-between items-center mb-4">
         <div>
             <h3 class="text-lg font-semibold text-gray-900">Sales by Month</h3>
-            <p class="text-sm text-gray-500">Monthly sales totals (synced with year selector above)</p>
+            <p class="text-sm text-gray-500">Monthly sales totals with optional year comparison</p>
         </div>
-        <div class="text-right">
-            <span id="revenueYearTotal" class="text-lg font-bold text-green-600">
-                ${{ "{:,.0f}".format(deals_by_month.revenue_totals|sum) }}
-            </span>
-            <span class="text-sm text-gray-500 ml-1">total for <span id="revenueYearLabel">{{ deals_by_month.year }}</span></span>
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="text-right">
+                <span id="salesYearTotal" class="text-lg font-bold text-green-600">
+                    ${{ "{:,.0f}".format(deals_by_month.revenue_totals|sum) }}
+                </span>
+                <span class="text-sm text-gray-500 ml-1">total for <span id="salesYearLabel">{{ deals_by_month.year }}</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <select id="salesYearSelect" onchange="updateSalesChart()"
+                        class="px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-700 cursor-pointer">
+                    {% for yr in deals_by_month.available_years %}
+                    <option value="{{ yr }}" {{ 'selected' if yr == deals_by_month.year else '' }}>{{ yr }}</option>
+                    {% endfor %}
+                </select>
+                <span class="text-sm text-gray-500">vs</span>
+                <select id="salesCompareSelect" onchange="updateSalesChart()"
+                        class="px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-700 cursor-pointer">
+                    <option value="">None</option>
+                    {% for yr in deals_by_month.available_years %}
+                    <option value="{{ yr }}">{{ yr }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
     </div>
     <div style="height: 350px;">
-        <canvas id="revenueByMonthChart"></canvas>
+        <canvas id="salesByMonthChart"></canvas>
     </div>
-    <div id="revenueChartLoading" class="hidden text-center py-4 text-gray-500">Loading...</div>
+    <div id="salesChartLoading" class="hidden text-center py-4 text-gray-500">Loading...</div>
 </div>
 
 <!-- Source/Medium Tables -->
@@ -1062,27 +1080,79 @@ function applyMonthFilter() {
         });
     }
 
-    // Revenue by Month Bar Chart
-    let revenueChartInstance = null;
+    // Sales by Month Bar Chart (with optional year comparison)
+    let salesChartInstance = null;
+    let salesYearData = null;
+    let salesCompareData = null;
 
-    function createRevenueChart(data) {
-        const ctx = document.getElementById('revenueByMonthChart').getContext('2d');
+    async function updateSalesChart() {
+        const year = document.getElementById('salesYearSelect').value;
+        const compareYear = document.getElementById('salesCompareSelect').value;
 
-        // Destroy existing chart if it exists
-        if (revenueChartInstance) {
-            revenueChartInstance.destroy();
+        document.getElementById('salesChartLoading').classList.remove('hidden');
+
+        try {
+            // Fetch primary year data
+            const response = await fetch('/api/deals/by-year/' + year);
+            salesYearData = await response.json();
+
+            // Fetch comparison year data if selected
+            if (compareYear && compareYear !== year) {
+                const compareResponse = await fetch('/api/deals/by-year/' + compareYear);
+                salesCompareData = await compareResponse.json();
+            } else {
+                salesCompareData = null;
+            }
+
+            createSalesChart(salesYearData, salesCompareData, year, compareYear);
+        } catch (error) {
+            console.error('Error loading sales data:', error);
         }
 
-        // Build datasets for each medium (stacked by revenue)
-        const datasets = data.mediums.map((medium, index) => ({
-            label: medium,
-            data: data.revenue_data[medium] || [],
-            backgroundColor: chartColors[index % chartColors.length],
-            borderColor: chartColors[index % chartColors.length].replace('0.8', '1'),
-            borderWidth: 1
-        }));
+        document.getElementById('salesChartLoading').classList.add('hidden');
+    }
 
-        revenueChartInstance = new Chart(ctx, {
+    function createSalesChart(data, compareData, year, compareYear) {
+        const ctx = document.getElementById('salesByMonthChart').getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (salesChartInstance) {
+            salesChartInstance.destroy();
+        }
+
+        let datasets;
+        let isComparing = compareData !== null && compareYear && compareYear !== year;
+
+        if (isComparing) {
+            // Grouped bar chart - show both years side by side
+            datasets = [
+                {
+                    label: year,
+                    data: data.revenue_totals,
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: compareYear,
+                    data: compareData.revenue_totals,
+                    backgroundColor: 'rgba(107, 114, 128, 0.6)',
+                    borderColor: 'rgba(107, 114, 128, 1)',
+                    borderWidth: 1
+                }
+            ];
+        } else {
+            // Single year - show totals per month
+            datasets = [{
+                label: year,
+                data: data.revenue_totals,
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 1
+            }];
+        }
+
+        salesChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: data.month_names,
@@ -1091,46 +1161,42 @@ function applyMonthFilter() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const element = elements[0];
-                        const datasetIndex = element.datasetIndex;
-                        const monthIndex = element.index;
-                        const medium = data.mediums[datasetIndex];
-                        const month = data.months[monthIndex];
-                        showDealsByMonthMedium(month, medium);
-                    }
-                },
                 plugins: {
                     legend: {
+                        display: isComparing,
                         position: 'bottom'
                     },
                     tooltip: {
                         callbacks: {
-                            title: function(context) {
-                                const monthIndex = context[0].dataIndex;
-                                const total = data.revenue_totals[monthIndex];
-                                return data.month_names[monthIndex] + ' ' + currentDealsYear + ' (Total: $' + total.toLocaleString() + ')';
-                            },
                             label: function(context) {
-                                return `${context.dataset.label}: $${context.raw.toLocaleString()}`;
+                                const value = context.raw || 0;
+                                return `${context.dataset.label}: $${value.toLocaleString()}`;
                             },
-                            afterBody: function() {
-                                return '\nClick to see these deals';
+                            afterBody: function(context) {
+                                if (isComparing) {
+                                    const monthIndex = context[0].dataIndex;
+                                    const currentVal = data.revenue_totals[monthIndex] || 0;
+                                    const compareVal = compareData.revenue_totals[monthIndex] || 0;
+                                    if (compareVal > 0) {
+                                        const diff = currentVal - compareVal;
+                                        const pctChange = ((diff / compareVal) * 100).toFixed(1);
+                                        const sign = diff >= 0 ? '+' : '';
+                                        return `\n${sign}$${diff.toLocaleString()} (${sign}${pctChange}%)`;
+                                    }
+                                }
+                                return '';
                             }
                         }
                     }
                 },
                 scales: {
                     x: {
-                        stacked: true,
                         title: {
                             display: true,
                             text: 'Month'
                         }
                     },
                     y: {
-                        stacked: true,
                         beginAtZero: true,
                         title: {
                             display: true,
@@ -1145,48 +1211,56 @@ function applyMonthFilter() {
                 }
             },
             plugins: [{
-                id: 'revenueTotalLabels',
+                id: 'salesTotalLabels',
                 afterDatasetsDraw: function(chart) {
                     const ctx = chart.ctx;
+                    const datasets = chart.data.datasets;
 
-                    chart.data.labels.forEach((label, index) => {
-                        const total = data.revenue_totals[index];
-                        if (total > 0) {
-                            // Get the top of the stacked bar
-                            const meta = chart.getDatasetMeta(chart.data.datasets.length - 1);
-                            const bar = meta.data[index];
-                            if (bar) {
-                                const x = bar.x;
-                                const y = bar.y - 8;
-
-                                ctx.save();
-                                ctx.fillStyle = '#059669';
-                                ctx.font = 'bold 11px Arial';
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'bottom';
-                                ctx.fillText('$' + total.toLocaleString(), x, y);
-                                ctx.restore();
+                    // Only show labels on single year mode (not comparison)
+                    if (!isComparing) {
+                        chart.data.labels.forEach((label, index) => {
+                            const total = data.revenue_totals[index];
+                            if (total > 0) {
+                                const meta = chart.getDatasetMeta(0);
+                                const bar = meta.data[index];
+                                if (bar) {
+                                    ctx.save();
+                                    ctx.fillStyle = '#059669';
+                                    ctx.font = 'bold 11px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'bottom';
+                                    ctx.fillText('$' + total.toLocaleString(), bar.x, bar.y - 5);
+                                    ctx.restore();
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
             }]
         });
 
         // Update the year total display
         const yearTotal = data.revenue_totals.reduce((a, b) => a + b, 0);
-        document.getElementById('revenueYearTotal').textContent = '$' + yearTotal.toLocaleString();
-        document.getElementById('revenueYearLabel').textContent = currentDealsYear;
+        document.getElementById('salesYearTotal').textContent = '$' + yearTotal.toLocaleString();
+
+        if (isComparing) {
+            const compareTotal = compareData.revenue_totals.reduce((a, b) => a + b, 0);
+            const diff = yearTotal - compareTotal;
+            const pctChange = compareTotal > 0 ? ((diff / compareTotal) * 100).toFixed(1) : 0;
+            const sign = diff >= 0 ? '+' : '';
+            document.getElementById('salesYearLabel').innerHTML = `${year} <span class="${diff >= 0 ? 'text-green-600' : 'text-red-600'}">(${sign}${pctChange}% vs ${compareYear})</span>`;
+        } else {
+            document.getElementById('salesYearLabel').textContent = year;
+        }
     }
 
-    // Function to load deals for a different year
+    // Function to load deals for a different year (deals chart only)
     async function loadDealsForYear(year) {
         // Update dropdown selection
         document.getElementById('yearSelect').value = year;
 
         // Show loading
         document.getElementById('dealsChartLoading').classList.remove('hidden');
-        document.getElementById('revenueChartLoading').classList.remove('hidden');
 
         try {
             const response = await fetch('/api/deals/by-year/' + year);
@@ -1194,13 +1268,11 @@ function applyMonthFilter() {
             currentDealsYear = year;
             currentDealsData = data;
             createDealsChart2(data);
-            createRevenueChart(data);
         } catch (error) {
             console.error('Error loading deals data:', error);
         }
 
         document.getElementById('dealsChartLoading').classList.add('hidden');
-        document.getElementById('revenueChartLoading').classList.add('hidden');
     }
 
     // Function to show deals for a specific month and medium
@@ -1263,7 +1335,9 @@ function applyMonthFilter() {
 
     // Initialize the charts
     createDealsChart2(currentDealsData);
-    createRevenueChart(currentDealsData);
+    // Initialize sales chart with current data (no comparison by default)
+    salesYearData = currentDealsData;
+    createSalesChart(currentDealsData, null, '{{ deals_by_month.year }}', '');
 
     // Quick Notes Auto-Save
     const notesTextarea = document.getElementById('quick-notes');
