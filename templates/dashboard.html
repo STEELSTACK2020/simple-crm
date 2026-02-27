@@ -378,6 +378,26 @@ function applyMonthFilter() {
     <div id="dealsChartLoading" class="hidden text-center py-4 text-gray-500">Loading...</div>
 </div>
 
+<!-- Sales by Month Bar Chart -->
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <div class="flex flex-wrap justify-between items-center mb-4">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900">Sales by Month</h3>
+            <p class="text-sm text-gray-500">Monthly sales totals (synced with year selector above)</p>
+        </div>
+        <div class="text-right">
+            <span id="revenueYearTotal" class="text-lg font-bold text-green-600">
+                ${{ "{:,.0f}".format(deals_by_month.revenue_totals|sum) }}
+            </span>
+            <span class="text-sm text-gray-500 ml-1">total for <span id="revenueYearLabel">{{ deals_by_month.year }}</span></span>
+        </div>
+    </div>
+    <div style="height: 350px;">
+        <canvas id="revenueByMonthChart"></canvas>
+    </div>
+    <div id="revenueChartLoading" class="hidden text-center py-4 text-gray-500">Loading...</div>
+</div>
+
 <!-- Source/Medium Tables -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
     <!-- By Source Table -->
@@ -930,7 +950,9 @@ function applyMonthFilter() {
         month_names: [{% for m in deals_by_month.month_names %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
         mediums: [{% for m in deals_by_month.mediums %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}],
         data: {{ deals_by_month.data | tojson }},
-        totals: {{ deals_by_month.totals | tojson }}
+        revenue_data: {{ deals_by_month.revenue_data | tojson }},
+        totals: {{ deals_by_month.totals | tojson }},
+        revenue_totals: {{ deals_by_month.revenue_totals | tojson }}
     };
 
     function createDealsChart2(data) {
@@ -1040,6 +1062,123 @@ function applyMonthFilter() {
         });
     }
 
+    // Revenue by Month Bar Chart
+    let revenueChartInstance = null;
+
+    function createRevenueChart(data) {
+        const ctx = document.getElementById('revenueByMonthChart').getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (revenueChartInstance) {
+            revenueChartInstance.destroy();
+        }
+
+        // Build datasets for each medium (stacked by revenue)
+        const datasets = data.mediums.map((medium, index) => ({
+            label: medium,
+            data: data.revenue_data[medium] || [],
+            backgroundColor: chartColors[index % chartColors.length],
+            borderColor: chartColors[index % chartColors.length].replace('0.8', '1'),
+            borderWidth: 1
+        }));
+
+        revenueChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.month_names,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const element = elements[0];
+                        const datasetIndex = element.datasetIndex;
+                        const monthIndex = element.index;
+                        const medium = data.mediums[datasetIndex];
+                        const month = data.months[monthIndex];
+                        showDealsByMonthMedium(month, medium);
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const monthIndex = context[0].dataIndex;
+                                const total = data.revenue_totals[monthIndex];
+                                return data.month_names[monthIndex] + ' ' + currentDealsYear + ' (Total: $' + total.toLocaleString() + ')';
+                            },
+                            label: function(context) {
+                                return `${context.dataset.label}: $${context.raw.toLocaleString()}`;
+                            },
+                            afterBody: function() {
+                                return '\nClick to see these deals';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Sales ($)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'revenueTotalLabels',
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+
+                    chart.data.labels.forEach((label, index) => {
+                        const total = data.revenue_totals[index];
+                        if (total > 0) {
+                            // Get the top of the stacked bar
+                            const meta = chart.getDatasetMeta(chart.data.datasets.length - 1);
+                            const bar = meta.data[index];
+                            if (bar) {
+                                const x = bar.x;
+                                const y = bar.y - 8;
+
+                                ctx.save();
+                                ctx.fillStyle = '#059669';
+                                ctx.font = 'bold 11px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText('$' + total.toLocaleString(), x, y);
+                                ctx.restore();
+                            }
+                        }
+                    });
+                }
+            }]
+        });
+
+        // Update the year total display
+        const yearTotal = data.revenue_totals.reduce((a, b) => a + b, 0);
+        document.getElementById('revenueYearTotal').textContent = '$' + yearTotal.toLocaleString();
+        document.getElementById('revenueYearLabel').textContent = currentDealsYear;
+    }
+
     // Function to load deals for a different year
     async function loadDealsForYear(year) {
         // Update dropdown selection
@@ -1047,6 +1186,7 @@ function applyMonthFilter() {
 
         // Show loading
         document.getElementById('dealsChartLoading').classList.remove('hidden');
+        document.getElementById('revenueChartLoading').classList.remove('hidden');
 
         try {
             const response = await fetch('/api/deals/by-year/' + year);
@@ -1054,11 +1194,13 @@ function applyMonthFilter() {
             currentDealsYear = year;
             currentDealsData = data;
             createDealsChart2(data);
+            createRevenueChart(data);
         } catch (error) {
             console.error('Error loading deals data:', error);
         }
 
         document.getElementById('dealsChartLoading').classList.add('hidden');
+        document.getElementById('revenueChartLoading').classList.add('hidden');
     }
 
     // Function to show deals for a specific month and medium
@@ -1119,8 +1261,9 @@ function applyMonthFilter() {
         document.getElementById('modalContent').innerHTML = html;
     }
 
-    // Initialize the chart
+    // Initialize the charts
     createDealsChart2(currentDealsData);
+    createRevenueChart(currentDealsData);
 
     // Quick Notes Auto-Save
     const notesTextarea = document.getElementById('quick-notes');

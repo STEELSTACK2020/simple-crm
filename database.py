@@ -2062,23 +2062,31 @@ def get_deals_by_month_medium(year=None):
     # Get available years (2024 through 2030)
     available_years = [str(y) for y in range(2030, 2023, -1)]
 
-    # Build structured data for chart
+    # Build structured data for chart (deal counts and revenue)
     chart_data = {}
+    revenue_data = {}
     for medium in mediums:
         chart_data[medium] = []
+        revenue_data[medium] = []
         for month in all_months:
             count = 0
+            revenue = 0
             for row in raw_data:
                 if row['month'] == month and row['medium'] == medium:
                     count = row['deal_count']
+                    revenue = row['revenue']
                     break
             chart_data[medium].append(count)
+            revenue_data[medium].append(revenue)
 
-    # Calculate totals per month
+    # Calculate totals per month (deals and revenue)
     monthly_totals = []
+    monthly_revenue_totals = []
     for i, month in enumerate(all_months):
         total = sum(chart_data[medium][i] for medium in mediums)
+        revenue_total = sum(revenue_data[medium][i] for medium in mediums)
         monthly_totals.append(total)
+        monthly_revenue_totals.append(revenue_total)
 
     conn.close()
     return {
@@ -2087,7 +2095,9 @@ def get_deals_by_month_medium(year=None):
         'month_names': month_names,
         'mediums': mediums,
         'data': chart_data,
+        'revenue_data': revenue_data,
         'totals': monthly_totals,
+        'revenue_totals': monthly_revenue_totals,
         'available_years': available_years,
         'raw': raw_data
     }
