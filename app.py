@@ -345,7 +345,7 @@ def dashboard():
     analytics = get_dashboard_analytics(start_date=start_date, end_date=end_date)
     comparison = get_deals_year_comparison()
     deals_by_month = get_deals_by_month_medium()
-    awaiting_response = get_awaiting_response_contacts(days_threshold=3, limit=15)
+    awaiting_response = get_awaiting_response_contacts(days_threshold=3, limit=50)
     quick_notes = get_quick_notes(session.get('user_id', 1))
     return render_template('dashboard.html', analytics=analytics, comparison=comparison,
                           deals_by_month=deals_by_month, awaiting_response=awaiting_response,
@@ -1223,7 +1223,7 @@ def api_sync_email_status():
                 "error": "No users have email connected. Go to Settings > Email to connect Outlook."
             })
 
-        contacts = get_contacts_for_email_sync(limit=100)  # Reduced batch size
+        contacts = get_contacts_for_email_sync(limit=250)  # Batch size per sync
         synced_count = 0
         errors = []
 
