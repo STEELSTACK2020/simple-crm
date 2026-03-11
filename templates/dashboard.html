@@ -130,7 +130,9 @@
 </div>
 
 <script>
-function syncEmailStatus() {
+let syncPollInterval = null;
+
+async function syncEmailStatus() {
     const btn = document.getElementById('sync-btn');
     const icon = document.getElementById('sync-icon');
     const text = document.getElementById('sync-text');
@@ -140,45 +142,97 @@ function syncEmailStatus() {
     icon.classList.add('animate-spin');
     text.textContent = 'Starting...';
 
-    const eventSource = new EventSource('/api/sync-email-status');
+    try {
+        // Start the background sync
+        const response = await fetch('/api/sync-email-status', { method: 'POST' });
+        const data = await response.json();
 
-    eventSource.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-
-        if (data.error) {
+        if (!data.success) {
             text.textContent = 'Error';
-            status.textContent = data.error;
-            eventSource.close();
+            status.textContent = data.error || 'Failed to start sync';
             btn.disabled = false;
             icon.classList.remove('animate-spin');
             return;
         }
 
-        if (data.status === 'starting') {
-            text.textContent = `0/${data.total}`;
-            status.textContent = 'Starting sync...';
-        } else if (data.status === 'syncing') {
-            text.textContent = `${data.progress}/${data.total}`;
-            status.textContent = `Syncing contacts...`;
-        } else if (data.status === 'complete') {
-            text.textContent = 'Done!';
-            status.textContent = `Synced ${data.synced_count} contacts`;
-            eventSource.close();
-            icon.classList.remove('animate-spin');
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        }
-    };
+        // Poll for status every 2 seconds
+        pollSyncStatus();
 
-    eventSource.onerror = function() {
+    } catch (err) {
         text.textContent = 'Error';
-        status.textContent = 'Connection lost';
-        eventSource.close();
+        status.textContent = 'Failed to start sync';
         btn.disabled = false;
         icon.classList.remove('animate-spin');
-    };
+    }
 }
+
+function pollSyncStatus() {
+    const btn = document.getElementById('sync-btn');
+    const icon = document.getElementById('sync-icon');
+    const text = document.getElementById('sync-text');
+    const status = document.getElementById('sync-status');
+
+    // Clear any existing poll
+    if (syncPollInterval) clearInterval(syncPollInterval);
+
+    syncPollInterval = setInterval(async () => {
+        try {
+            const response = await fetch('/api/sync-email-status/status');
+            const data = await response.json();
+
+            if (data.error) {
+                text.textContent = 'Error';
+                status.textContent = data.error;
+                clearInterval(syncPollInterval);
+                btn.disabled = false;
+                icon.classList.remove('animate-spin');
+                return;
+            }
+
+            if (data.status === 'starting') {
+                text.textContent = 'Starting...';
+                status.textContent = 'Preparing sync...';
+            } else if (data.status === 'syncing') {
+                text.textContent = `${data.progress}/${data.total}`;
+                status.textContent = 'Syncing (refresh anytime)...';
+            } else if (data.status === 'complete') {
+                text.textContent = 'Done!';
+                status.textContent = `Synced ${data.synced_count} contacts`;
+                clearInterval(syncPollInterval);
+                icon.classList.remove('animate-spin');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else if (data.status === 'idle' && !data.running) {
+                // Not running - enable button
+                text.textContent = 'Sync Now';
+                status.textContent = '';
+                clearInterval(syncPollInterval);
+                btn.disabled = false;
+                icon.classList.remove('animate-spin');
+            }
+
+        } catch (err) {
+            // Network error - keep polling, sync is still running on server
+            status.textContent = 'Checking status...';
+        }
+    }, 2000);
+}
+
+// Check if sync is already running on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const response = await fetch('/api/sync-email-status/status');
+        const data = await response.json();
+        if (data.running) {
+            const btn = document.getElementById('sync-btn');
+            const icon = document.getElementById('sync-icon');
+            btn.disabled = true;
+            icon.classList.add('animate-spin');
+            pollSyncStatus();
+        }
+    } catch (err) {}
+});
 
 async function dismissFollowup(contactId) {
     if (!confirm('Dismiss this contact from follow-up? (Use when you talked to them on the phone, etc.)')) return;

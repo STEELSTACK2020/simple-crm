@@ -1212,76 +1212,104 @@ def api_get_email_body(source, email_id):
 
 # ============== Email Sync / Awaiting Response Routes ==============
 
-@app.route('/api/sync-email-status', methods=['GET'])
-@login_required
-def api_sync_email_status():
-    """
-    Sync email status for all contacts using Server-Sent Events for progress.
-    Fetches emails from all connected users and updates last_inbound/outbound dates.
-    """
+# Global sync status (persists across requests)
+_sync_status = {
+    'running': False,
+    'progress': 0,
+    'total': 0,
+    'status': 'idle',
+    'synced_count': 0,
+    'error': None
+}
+
+def _run_email_sync():
+    """Background sync worker - updates _sync_status as it runs."""
+    global _sync_status
     import traceback
     from email_integration import fetch_emails_for_contact_all_users, analyze_email_status
     from database import get_contacts_for_email_sync, update_contact_email_status, get_users_with_email_connected
-    import json
 
-    def generate():
-        try:
-            # Check if any users have email connected
-            connected_users = get_users_with_email_connected()
-            if not connected_users:
-                yield f"data: {json.dumps({'error': 'No users have email connected. Go to Settings > Email to connect Outlook.'})}\n\n"
-                return
+    try:
+        connected_users = get_users_with_email_connected()
+        if not connected_users:
+            _sync_status['error'] = 'No users have email connected. Go to Settings > Email to connect Outlook.'
+            _sync_status['running'] = False
+            _sync_status['status'] = 'error'
+            return
 
-            contacts = get_contacts_for_email_sync(limit=500)  # Sync all 2026+ contacts in one click
-            total = len(contacts)
-            synced_count = 0
-            errors = []
+        contacts = get_contacts_for_email_sync(limit=500)
+        total = len(contacts)
+        _sync_status['total'] = total
+        _sync_status['progress'] = 0
+        _sync_status['status'] = 'syncing'
+        synced_count = 0
 
-            # Send initial count
-            yield f"data: {json.dumps({'progress': 0, 'total': total, 'status': 'starting'})}\n\n"
+        for i, contact in enumerate(contacts):
+            try:
+                email_address = contact['email']
+                result = fetch_emails_for_contact_all_users(email_address, max_results=20)
 
-            for i, contact in enumerate(contacts):
-                try:
-                    email_address = contact['email']
-                    result = fetch_emails_for_contact_all_users(email_address, max_results=20)
+                if result.get('success') and result.get('emails'):
+                    status = analyze_email_status(result['emails'], email_address)
+                    update_contact_email_status(
+                        contact['id'],
+                        status['last_outbound_date'],
+                        status['last_inbound_date'],
+                        status['last_outbound_subject']
+                    )
+                else:
+                    update_contact_email_status(contact['id'], None, None, None)
 
-                    if result.get('success') and result.get('emails'):
-                        status = analyze_email_status(result['emails'], email_address)
-                        update_contact_email_status(
-                            contact['id'],
-                            status['last_outbound_date'],
-                            status['last_inbound_date'],
-                            status['last_outbound_subject']
-                        )
-                    else:
-                        # No emails found or error - still mark as synced
-                        update_contact_email_status(contact['id'], None, None, None)
+                synced_count += 1
+                _sync_status['progress'] = i + 1
+                _sync_status['synced_count'] = synced_count
 
-                    synced_count += 1
-                    # Send progress update every 5 contacts
-                    if (i + 1) % 5 == 0 or i == total - 1:
-                        yield f"data: {json.dumps({'progress': i + 1, 'total': total, 'status': 'syncing'})}\n\n"
+            except Exception as e:
+                print(f"Error syncing {contact['email']}: {traceback.format_exc()}")
 
-                except Exception as e:
-                    errors.append(f"{contact['email']}: {str(e)}")
-                    print(f"Error syncing {contact['email']}: {traceback.format_exc()}")
+        _sync_status['status'] = 'complete'
+        _sync_status['running'] = False
 
-            # Send completion
-            yield f"data: {json.dumps({'progress': total, 'total': total, 'status': 'complete', 'synced_count': synced_count, 'errors': errors if errors else None})}\n\n"
+    except Exception as e:
+        print(f"Sync error: {traceback.format_exc()}")
+        _sync_status['error'] = str(e)
+        _sync_status['status'] = 'error'
+        _sync_status['running'] = False
 
-        except Exception as e:
-            print(f"Sync error: {traceback.format_exc()}")
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
-    return Response(
-        generate(),
-        mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'X-Accel-Buffering': 'no',  # Disable buffering for Nginx/proxies
-            'Connection': 'keep-alive'
-        }
-    )
+@app.route('/api/sync-email-status', methods=['POST'])
+@login_required
+def api_sync_email_status():
+    """Start background email sync. Returns immediately, sync runs in background."""
+    import threading
+
+    global _sync_status
+
+    # Don't start if already running
+    if _sync_status['running']:
+        return jsonify({'success': False, 'error': 'Sync already running', 'status': _sync_status})
+
+    # Reset status and start background thread
+    _sync_status = {
+        'running': True,
+        'progress': 0,
+        'total': 0,
+        'status': 'starting',
+        'synced_count': 0,
+        'error': None
+    }
+
+    thread = threading.Thread(target=_run_email_sync, daemon=True)
+    thread.start()
+
+    return jsonify({'success': True, 'message': 'Sync started'})
+
+
+@app.route('/api/sync-email-status/status', methods=['GET'])
+@login_required
+def api_sync_status():
+    """Check background sync progress."""
+    return jsonify(_sync_status)
 
 
 @app.route('/api/contacts/<int:contact_id>/dismiss-followup', methods=['POST'])
