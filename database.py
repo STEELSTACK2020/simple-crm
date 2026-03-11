@@ -765,7 +765,9 @@ def dismiss_contact_followup(contact_id):
 
 def get_awaiting_response_contacts(days_threshold=3, limit=20, offset=0):
     """
-    Get contacts awaiting a response - emailed but no reply within threshold days.
+    Get contacts awaiting a response - emailed but NEVER replied.
+    Only shows contacts who have never sent us an inbound email.
+    Dismissed contacts are permanently hidden.
     Only includes contacts created from 2026-01-01 onwards.
     Sorted by newest contact first (created_at DESC).
     """
@@ -780,13 +782,9 @@ def get_awaiting_response_contacts(days_threshold=3, limit=20, offset=0):
                last_email_subject, email_synced_at, followup_dismissed_at
         FROM contacts
         WHERE last_outbound_email_date IS NOT NULL
-          AND (
-            last_inbound_email_date IS NULL
-            OR last_outbound_email_date > last_inbound_email_date
-          )
+          AND last_inbound_email_date IS NULL
           AND {date_diff} >= %s
-          AND (followup_dismissed_at IS NULL
-               OR last_outbound_email_date > followup_dismissed_at)
+          AND followup_dismissed_at IS NULL
           AND created_at >= '2026-01-01'
         ORDER BY created_at DESC
         LIMIT %s OFFSET %s
@@ -806,13 +804,9 @@ def get_awaiting_response_count(days_threshold=3):
     cursor.execute(f"""
         SELECT COUNT(*) as cnt FROM contacts
         WHERE last_outbound_email_date IS NOT NULL
-          AND (
-            last_inbound_email_date IS NULL
-            OR last_outbound_email_date > last_inbound_email_date
-          )
+          AND last_inbound_email_date IS NULL
           AND {date_diff} >= %s
-          AND (followup_dismissed_at IS NULL
-               OR last_outbound_email_date > followup_dismissed_at)
+          AND followup_dismissed_at IS NULL
           AND created_at >= '2026-01-01'
     """, (days_threshold,))
 
