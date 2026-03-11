@@ -816,24 +816,43 @@ def get_awaiting_response_count(days_threshold=3):
 
 
 def get_contacts_for_email_sync(limit=500):
-    """Get contacts with email addresses for syncing email status (2026+ only)."""
+    """
+    Get contacts with email addresses for syncing email status.
+    Skips: dismissed contacts, contacts with deals, pre-2026 contacts.
+    """
     conn = get_connection()
     cursor = conn.cursor()
-    # Use CASE to handle NULL sorting (works in both SQLite and PostgreSQL)
     placeholder = "%s" if os.environ.get('DATABASE_URL') else "?"
     cursor.execute(f"""
-        SELECT id, email FROM contacts
-        WHERE email IS NOT NULL AND email != ''
-          AND created_at >= '2026-01-01'
+        SELECT c.id, c.email FROM contacts c
+        WHERE c.email IS NOT NULL AND c.email != ''
+          AND c.created_at >= '2026-01-01'
+          AND c.followup_dismissed_at IS NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM deal_contacts dc WHERE dc.contact_id = c.id
+          )
         ORDER BY
-            CASE WHEN email_synced_at IS NULL THEN 0 ELSE 1 END,
-            email_synced_at ASC,
-            created_at DESC
+            CASE WHEN c.email_synced_at IS NULL THEN 0 ELSE 1 END,
+            c.email_synced_at ASC,
+            c.created_at DESC
         LIMIT {placeholder}
     """, (limit,))
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+def get_last_email_sync_time():
+    """Get the most recent email sync timestamp."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT MAX(email_synced_at) as last_sync FROM contacts
+        WHERE email_synced_at IS NOT NULL
+    """)
+    result = cursor.fetchone()
+    conn.close()
+    return result['last_sync'] if result else None
 
 
 def get_contacts_by_activity(limit=100, offset=0):

@@ -15,7 +15,7 @@ from database import (
     get_all_contacts, search_contacts, delete_contact, get_contacts_count, get_contacts_by_date_range,
     get_analytics, set_deal_value, get_year_comparison,
     get_leads_by_month_medium, get_deals_for_contact,
-    update_contact_activity, get_untouched_leads, get_awaiting_response_contacts, get_awaiting_response_count, sync_utm_from_contact_to_deals,
+    update_contact_activity, get_untouched_leads, get_awaiting_response_contacts, get_awaiting_response_count, get_last_email_sync_time, sync_utm_from_contact_to_deals,
     # Deal functions
     DEAL_STAGES, add_deal, update_deal, update_deal_stage, get_deal,
     get_all_deals, get_deals_by_stage, delete_deal,
@@ -353,12 +353,13 @@ def dashboard():
     awaiting_response = get_awaiting_response_contacts(days_threshold=3, limit=ar_per_page, offset=ar_offset)
     ar_total = get_awaiting_response_count(days_threshold=3)
     ar_total_pages = (ar_total + ar_per_page - 1) // ar_per_page  # Ceiling division
+    last_sync_time = get_last_email_sync_time()
 
     quick_notes = get_quick_notes(session.get('user_id', 1))
     return render_template('dashboard.html', analytics=analytics, comparison=comparison,
                           deals_by_month=deals_by_month, awaiting_response=awaiting_response,
                           ar_page=ar_page, ar_total=ar_total, ar_total_pages=ar_total_pages,
-                          quick_notes=quick_notes)
+                          last_sync_time=last_sync_time, quick_notes=quick_notes)
 
 
 @app.route('/api/quick-notes', methods=['POST'])

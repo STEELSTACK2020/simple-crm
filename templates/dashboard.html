@@ -33,6 +33,11 @@
         <div>
             <h3 class="text-lg font-semibold text-amber-800">Awaiting Response</h3>
             <p class="text-sm text-amber-600">Contacts who haven't replied to your emails in 3+ days (sorted by newest)</p>
+            {% if last_sync_time %}
+            <p class="text-xs text-gray-500 mt-1">Last synced: {{ last_sync_time|parse_iso_date|format_date('%b %d, %Y at %I:%M %p') }}</p>
+            {% else %}
+            <p class="text-xs text-gray-500 mt-1">Not synced yet</p>
+            {% endif %}
         </div>
         <div class="flex items-center gap-3">
             <button onclick="syncEmailStatus()" id="sync-btn" class="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded hover:bg-amber-200 flex items-center gap-1">
