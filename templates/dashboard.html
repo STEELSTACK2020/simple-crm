@@ -130,7 +130,7 @@
 </div>
 
 <script>
-async function syncEmailStatus() {
+function syncEmailStatus() {
     const btn = document.getElementById('sync-btn');
     const icon = document.getElementById('sync-icon');
     const text = document.getElementById('sync-text');
@@ -138,30 +138,46 @@ async function syncEmailStatus() {
 
     btn.disabled = true;
     icon.classList.add('animate-spin');
-    text.textContent = 'Syncing...';
+    text.textContent = 'Starting...';
 
-    try {
-        const response = await fetch('/api/sync-email-status', { method: 'POST' });
-        const data = await response.json();
+    const eventSource = new EventSource('/api/sync-email-status');
 
-        if (data.success) {
-            status.textContent = `Synced ${data.synced_count} contacts`;
+    eventSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+
+        if (data.error) {
+            text.textContent = 'Error';
+            status.textContent = data.error;
+            eventSource.close();
+            btn.disabled = false;
+            icon.classList.remove('animate-spin');
+            return;
+        }
+
+        if (data.status === 'starting') {
+            text.textContent = `0/${data.total}`;
+            status.textContent = 'Starting sync...';
+        } else if (data.status === 'syncing') {
+            text.textContent = `${data.progress}/${data.total}`;
+            status.textContent = `Syncing contacts...`;
+        } else if (data.status === 'complete') {
             text.textContent = 'Done!';
+            status.textContent = `Synced ${data.synced_count} contacts`;
+            eventSource.close();
+            icon.classList.remove('animate-spin');
             setTimeout(() => {
                 window.location.reload();
-            }, 1000);
-        } else {
-            text.textContent = 'Error';
-            status.textContent = 'Sync failed';
+            }, 1500);
         }
-    } catch (err) {
-        text.textContent = 'Error';
-        status.textContent = 'Sync failed';
-    }
+    };
 
-    btn.disabled = false;
-    icon.classList.remove('animate-spin');
-    setTimeout(() => { text.textContent = 'Sync Now'; }, 2000);
+    eventSource.onerror = function() {
+        text.textContent = 'Error';
+        status.textContent = 'Connection lost';
+        eventSource.close();
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+    };
 }
 
 async function dismissFollowup(contactId) {

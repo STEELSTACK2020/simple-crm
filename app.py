@@ -1212,64 +1212,68 @@ def api_get_email_body(source, email_id):
 
 # ============== Email Sync / Awaiting Response Routes ==============
 
-@app.route('/api/sync-email-status', methods=['POST'])
+@app.route('/api/sync-email-status', methods=['GET'])
 @login_required
 def api_sync_email_status():
     """
-    Sync email status for all contacts.
+    Sync email status for all contacts using Server-Sent Events for progress.
     Fetches emails from all connected users and updates last_inbound/outbound dates.
     """
     import traceback
-    try:
-        from email_integration import fetch_emails_for_contact_all_users, analyze_email_status
-        from database import get_contacts_for_email_sync, update_contact_email_status, get_users_with_email_connected
+    from email_integration import fetch_emails_for_contact_all_users, analyze_email_status
+    from database import get_contacts_for_email_sync, update_contact_email_status, get_users_with_email_connected
+    import json
 
-        # Check if any users have email connected
-        connected_users = get_users_with_email_connected()
-        if not connected_users:
-            return jsonify({
-                "success": False,
-                "error": "No users have email connected. Go to Settings > Email to connect Outlook."
-            })
+    def generate():
+        try:
+            # Check if any users have email connected
+            connected_users = get_users_with_email_connected()
+            if not connected_users:
+                yield f"data: {json.dumps({'error': 'No users have email connected. Go to Settings > Email to connect Outlook.'})}\n\n"
+                return
 
-        contacts = get_contacts_for_email_sync(limit=250)  # Batch size per sync
-        synced_count = 0
-        errors = []
+            contacts = get_contacts_for_email_sync(limit=250)  # Batch size per sync
+            total = len(contacts)
+            synced_count = 0
+            errors = []
 
-        for contact in contacts:
-            try:
-                email_address = contact['email']
-                result = fetch_emails_for_contact_all_users(email_address, max_results=20)
+            # Send initial count
+            yield f"data: {json.dumps({'progress': 0, 'total': total, 'status': 'starting'})}\n\n"
 
-                if result.get('success') and result.get('emails'):
-                    status = analyze_email_status(result['emails'], email_address)
-                    update_contact_email_status(
-                        contact['id'],
-                        status['last_outbound_date'],
-                        status['last_inbound_date'],
-                        status['last_outbound_subject']
-                    )
+            for i, contact in enumerate(contacts):
+                try:
+                    email_address = contact['email']
+                    result = fetch_emails_for_contact_all_users(email_address, max_results=20)
+
+                    if result.get('success') and result.get('emails'):
+                        status = analyze_email_status(result['emails'], email_address)
+                        update_contact_email_status(
+                            contact['id'],
+                            status['last_outbound_date'],
+                            status['last_inbound_date'],
+                            status['last_outbound_subject']
+                        )
+                    else:
+                        # No emails found or error - still mark as synced
+                        update_contact_email_status(contact['id'], None, None, None)
+
                     synced_count += 1
-                else:
-                    # No emails found or error - still mark as synced
-                    update_contact_email_status(contact['id'], None, None, None)
-                    synced_count += 1
-            except Exception as e:
-                errors.append(f"{contact['email']}: {str(e)}")
-                print(f"Error syncing {contact['email']}: {traceback.format_exc()}")
+                    # Send progress update every 5 contacts
+                    if (i + 1) % 5 == 0 or i == total - 1:
+                        yield f"data: {json.dumps({'progress': i + 1, 'total': total, 'status': 'syncing'})}\n\n"
 
-        return jsonify({
-            "success": True,
-            "synced_count": synced_count,
-            "total_contacts": len(contacts),
-            "errors": errors if errors else None
-        })
-    except Exception as e:
-        print(f"Sync error: {traceback.format_exc()}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+                except Exception as e:
+                    errors.append(f"{contact['email']}: {str(e)}")
+                    print(f"Error syncing {contact['email']}: {traceback.format_exc()}")
+
+            # Send completion
+            yield f"data: {json.dumps({'progress': total, 'total': total, 'status': 'complete', 'synced_count': synced_count, 'errors': errors if errors else None})}\n\n"
+
+        except Exception as e:
+            print(f"Sync error: {traceback.format_exc()}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return Response(generate(), mimetype='text/event-stream')
 
 
 @app.route('/api/contacts/<int:contact_id>/dismiss-followup', methods=['POST'])
