@@ -3492,6 +3492,45 @@ def add_contact_salesperson_column():
         conn.close()
 
 
+def add_email_tracking_columns():
+    """Add email tracking columns to contacts table for Awaiting Response feature."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    columns_to_add = [
+        'last_outbound_email_date',
+        'last_inbound_email_date',
+        'last_email_subject',
+        'email_synced_at',
+        'followup_dismissed_at'
+    ]
+
+    for column in columns_to_add:
+        try:
+            if USE_POSTGRES:
+                # Check if column exists
+                cursor.execute("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name = 'contacts' AND column_name = %s
+                """, (column,))
+                if not cursor.fetchone():
+                    cursor.execute(f"ALTER TABLE contacts ADD COLUMN {column} TEXT")
+                    conn.commit()
+                    print(f"Added {column} column to contacts table")
+            else:
+                # SQLite - try to add, ignore if exists
+                try:
+                    cursor.execute(f"ALTER TABLE contacts ADD COLUMN {column} TEXT")
+                    conn.commit()
+                    print(f"Added {column} column to contacts table")
+                except:
+                    pass  # Column already exists
+        except Exception as e:
+            print(f"Note: {column} column may already exist: {e}")
+
+    conn.close()
+
+
 # ============== App Settings (key-value store for OAuth, config, etc.) ==============
 
 def init_app_settings_table():

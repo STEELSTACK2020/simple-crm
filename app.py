@@ -38,7 +38,7 @@ from database import (
     # Fix requests
     add_fix_request, get_fix_request, get_all_fix_requests, init_fix_requests_table, update_fix_request_status,
     # Migrations
-    add_sales_notes_column, add_contact_salesperson_column,
+    add_sales_notes_column, add_contact_salesperson_column, add_email_tracking_columns,
     add_user_salesperson_column, get_salesperson_for_user,
     get_users_with_email_connected,
     # App settings
@@ -172,6 +172,7 @@ init_app_settings_table()  # Create app_settings table if not exists
 migrate_ga_files_to_database()  # Migrate GA credentials from files to database
 add_sales_notes_column()  # Add sales_notes column to contacts if not exists
 add_contact_salesperson_column()  # Add salesperson_id column to contacts if not exists
+add_email_tracking_columns()  # Add email tracking columns for Awaiting Response feature
 add_user_salesperson_column()  # Add salesperson_id column to users for salesperson linking
 
 
