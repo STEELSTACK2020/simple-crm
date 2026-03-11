@@ -727,3 +727,60 @@ def fetch_emails_for_contact_all_users(email_address, max_results=30):
         'emails': all_emails[:max_results],
         'errors': errors if errors else None
     }
+
+
+def analyze_email_status(emails, contact_email):
+    """
+    Analyze a list of emails to determine the last inbound/outbound dates.
+
+    Args:
+        emails: List of email dicts with 'from', 'to', 'date', 'subject' fields
+        contact_email: The contact's email address
+
+    Returns:
+        dict with:
+        - last_outbound_date: Date of most recent email TO the contact (ISO format)
+        - last_inbound_date: Date of most recent email FROM the contact (ISO format)
+        - last_outbound_subject: Subject of the most recent outbound email
+    """
+    from dateutil import parser as date_parser
+
+    contact_email_lower = contact_email.lower()
+    last_outbound = None
+    last_inbound = None
+    last_outbound_subject = None
+
+    for email in emails:
+        from_field = email.get('from', '').lower()
+        to_field = email.get('to', '').lower()
+        date_str = email.get('date', '')
+        subject = email.get('subject', '')
+
+        # Skip if no date
+        if not date_str:
+            continue
+
+        # Parse the date
+        try:
+            email_date = date_parser.parse(date_str)
+        except:
+            continue
+
+        # Determine direction
+        is_inbound = contact_email_lower in from_field
+        is_outbound = contact_email_lower in to_field and contact_email_lower not in from_field
+
+        if is_inbound:
+            if last_inbound is None or email_date > last_inbound:
+                last_inbound = email_date
+
+        if is_outbound:
+            if last_outbound is None or email_date > last_outbound:
+                last_outbound = email_date
+                last_outbound_subject = subject
+
+    return {
+        'last_outbound_date': last_outbound.isoformat() if last_outbound else None,
+        'last_inbound_date': last_inbound.isoformat() if last_inbound else None,
+        'last_outbound_subject': last_outbound_subject
+    }

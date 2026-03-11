@@ -27,52 +27,138 @@
     </div>
 </div>
 
-<!-- Leads Needing Attention Widget -->
-{% if untouched_leads %}
-<div class="bg-white rounded-lg shadow overflow-hidden mb-8 border-l-4 border-red-500">
-    <div class="px-6 py-4 border-b bg-red-50 flex justify-between items-center">
+<!-- Awaiting Response Widget -->
+{% if awaiting_response %}
+<div class="bg-white rounded-lg shadow overflow-hidden mb-8 border-l-4 border-amber-500">
+    <div class="px-6 py-4 border-b bg-amber-50 flex justify-between items-center">
         <div>
-            <h3 class="text-lg font-semibold text-red-800">Leads Needing Attention</h3>
-            <p class="text-sm text-red-600">No emails sent, no notes added - these leads need follow-up!</p>
+            <h3 class="text-lg font-semibold text-amber-800">Awaiting Response</h3>
+            <p class="text-sm text-amber-600">Contacts who haven't replied to your emails in 3+ days</p>
         </div>
-        <span class="bg-red-600 text-white text-lg font-bold px-3 py-1 rounded-full">{{ untouched_leads|length }}</span>
+        <div class="flex items-center gap-3">
+            <button onclick="syncEmailStatus()" id="sync-btn" class="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded hover:bg-amber-200 flex items-center gap-1">
+                <svg class="w-3 h-3" id="sync-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span id="sync-text">Sync Now</span>
+            </button>
+            <span class="bg-amber-600 text-white text-lg font-bold px-3 py-1 rounded-full">{{ awaiting_response|length }}</span>
+        </div>
     </div>
-    <div class="max-h-64 overflow-y-auto">
+    <div class="max-h-72 overflow-y-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50 sticky top-0">
                 <tr>
                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Added</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Last Email</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Waiting</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200">
-                {% for lead in untouched_leads %}
-                <tr class="hover:bg-red-50">
+            <tbody class="divide-y divide-gray-200" id="awaiting-response-body">
+                {% for contact in awaiting_response %}
+                <tr class="hover:bg-amber-50" id="awaiting-row-{{ contact.id }}">
                     <td class="px-4 py-3">
-                        <a href="/contacts/{{ lead.id }}" class="text-sm font-medium text-gray-900 hover:text-red-600">
-                            {{ lead.first_name }} {{ lead.last_name }}
+                        <a href="/contacts/{{ contact.id }}" class="text-sm font-medium text-gray-900 hover:text-amber-600">
+                            {{ contact.first_name }} {{ contact.last_name }}
                         </a>
                     </td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.email }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.phone or '-' }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ lead.created_at|format_date if lead.created_at else '-' }}</td>
-                    <td class="px-4 py-3">
-                        <a href="/contacts/{{ lead.id }}" class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ contact.email }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="{{ contact.last_email_subject or 'No email yet' }}">
+                        {{ contact.last_email_subject[:40] + '...' if contact.last_email_subject and contact.last_email_subject|length > 40 else contact.last_email_subject or '-' }}
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                        {% if contact.last_outbound_email_date %}
+                            {% set days = ((now() - contact.last_outbound_email_date|parse_iso_date).days) if contact.last_outbound_email_date else 0 %}
+                            <span class="{% if days >= 7 %}text-red-600 font-semibold{% elif days >= 5 %}text-amber-600{% else %}text-gray-500{% endif %}">
+                                {{ days }} days
+                            </span>
+                        {% else %}
+                            <span class="text-gray-400">Never emailed</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 flex gap-2">
+                        <a href="/contacts/{{ contact.id }}" class="text-xs bg-amber-600 text-white px-2 py-1 rounded hover:bg-amber-700">
                             Follow Up
                         </a>
+                        <button onclick="dismissFollowup({{ contact.id }})" class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded hover:bg-gray-300" title="Dismiss (talked on phone, etc.)">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    <div class="px-6 py-3 bg-gray-50 border-t">
-        <a href="/contacts" class="text-sm text-red-600 hover:text-red-800 font-medium">View all contacts →</a>
+    <div class="px-6 py-3 bg-gray-50 border-t flex justify-between items-center">
+        <a href="/contacts" class="text-sm text-amber-600 hover:text-amber-800 font-medium">View all contacts →</a>
+        <span class="text-xs text-gray-400" id="sync-status"></span>
     </div>
 </div>
+
+<script>
+async function syncEmailStatus() {
+    const btn = document.getElementById('sync-btn');
+    const icon = document.getElementById('sync-icon');
+    const text = document.getElementById('sync-text');
+    const status = document.getElementById('sync-status');
+
+    btn.disabled = true;
+    icon.classList.add('animate-spin');
+    text.textContent = 'Syncing...';
+
+    try {
+        const response = await fetch('/api/sync-email-status', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success) {
+            status.textContent = `Synced ${data.synced_count} contacts`;
+            text.textContent = 'Done!';
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            text.textContent = 'Error';
+            status.textContent = 'Sync failed';
+        }
+    } catch (err) {
+        text.textContent = 'Error';
+        status.textContent = 'Sync failed';
+    }
+
+    btn.disabled = false;
+    icon.classList.remove('animate-spin');
+    setTimeout(() => { text.textContent = 'Sync Now'; }, 2000);
+}
+
+async function dismissFollowup(contactId) {
+    if (!confirm('Dismiss this contact from follow-up? (Use when you talked to them on the phone, etc.)')) return;
+
+    try {
+        const response = await fetch(`/api/contacts/${contactId}/dismiss-followup`, { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success) {
+            const row = document.getElementById(`awaiting-row-${contactId}`);
+            row.style.transition = 'opacity 0.3s';
+            row.style.opacity = '0';
+            setTimeout(() => row.remove(), 300);
+
+            // Update count badge
+            const badge = document.querySelector('.bg-amber-600.text-white');
+            if (badge) {
+                const count = parseInt(badge.textContent) - 1;
+                badge.textContent = count;
+            }
+        }
+    } catch (err) {
+        alert('Failed to dismiss contact');
+    }
+}
+</script>
 {% endif %}
 
 <!-- Date Filter Controls -->

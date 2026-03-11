@@ -15,7 +15,7 @@ from database import (
     get_all_contacts, search_contacts, delete_contact, get_contacts_count, get_contacts_by_date_range,
     get_analytics, set_deal_value, get_year_comparison,
     get_leads_by_month_medium, get_deals_for_contact,
-    update_contact_activity, get_untouched_leads, sync_utm_from_contact_to_deals,
+    update_contact_activity, get_untouched_leads, get_awaiting_response_contacts, sync_utm_from_contact_to_deals,
     # Deal functions
     DEAL_STAGES, add_deal, update_deal, update_deal_stage, get_deal,
     get_all_deals, get_deals_by_stage, delete_deal,
@@ -142,6 +142,28 @@ def format_date_filter(value, format='%Y-%m-%d'):
     if hasattr(value, 'strftime'):
         return value.strftime(format)
     return str(value)
+
+
+@app.template_filter('parse_iso_date')
+def parse_iso_date_filter(value):
+    """Parse an ISO date string into a datetime object."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            from dateutil import parser as date_parser
+            return date_parser.parse(value)
+        except:
+            return None
+    return value
+
+
+@app.context_processor
+def inject_now():
+    """Inject current datetime into templates."""
+    from datetime import datetime
+    return {'now': datetime.now}
+
 
 # Initialize database on startup
 init_database()
@@ -318,10 +340,10 @@ def dashboard():
     analytics = get_dashboard_analytics(start_date=start_date, end_date=end_date)
     comparison = get_deals_year_comparison()
     deals_by_month = get_deals_by_month_medium()
-    untouched_leads = get_untouched_leads(limit=10)
+    awaiting_response = get_awaiting_response_contacts(days_threshold=3, limit=15)
     quick_notes = get_quick_notes(session.get('user_id', 1))
     return render_template('dashboard.html', analytics=analytics, comparison=comparison,
-                          deals_by_month=deals_by_month, untouched_leads=untouched_leads,
+                          deals_by_month=deals_by_month, awaiting_response=awaiting_response,
                           quick_notes=quick_notes)
 
 
@@ -1171,6 +1193,60 @@ def api_get_email_body(source, email_id):
     else:
         return jsonify({"success": False, "error": "Invalid email source"}), 400
 
+    return jsonify(result)
+
+
+# ============== Email Sync / Awaiting Response Routes ==============
+
+@app.route('/api/sync-email-status', methods=['POST'])
+@login_required
+def api_sync_email_status():
+    """
+    Sync email status for all contacts.
+    Fetches emails from all connected users and updates last_inbound/outbound dates.
+    """
+    from email_integration import fetch_emails_for_contact_all_users, analyze_email_status
+    from database import get_contacts_for_email_sync, update_contact_email_status
+
+    contacts = get_contacts_for_email_sync(limit=500)
+    synced_count = 0
+    errors = []
+
+    for contact in contacts:
+        try:
+            email_address = contact['email']
+            result = fetch_emails_for_contact_all_users(email_address, max_results=30)
+
+            if result.get('success') and result.get('emails'):
+                status = analyze_email_status(result['emails'], email_address)
+                update_contact_email_status(
+                    contact['id'],
+                    status['last_outbound_date'],
+                    status['last_inbound_date'],
+                    status['last_outbound_subject']
+                )
+                synced_count += 1
+            elif result.get('emails') == []:
+                # No emails found - still mark as synced
+                update_contact_email_status(contact['id'], None, None, None)
+                synced_count += 1
+        except Exception as e:
+            errors.append(f"{contact['email']}: {str(e)}")
+
+    return jsonify({
+        "success": True,
+        "synced_count": synced_count,
+        "total_contacts": len(contacts),
+        "errors": errors if errors else None
+    })
+
+
+@app.route('/api/contacts/<int:contact_id>/dismiss-followup', methods=['POST'])
+@login_required
+def api_dismiss_followup(contact_id):
+    """Dismiss a contact from the awaiting response queue (talked on phone, etc.)."""
+    from database import dismiss_contact_followup
+    result = dismiss_contact_followup(contact_id)
     return jsonify(result)
 
 

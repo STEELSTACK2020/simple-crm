@@ -380,6 +380,28 @@ def init_database():
     except:
         pass
 
+    # Email sync tracking columns for "Awaiting Response" feature
+    try:
+        cursor.execute("ALTER TABLE contacts ADD COLUMN last_outbound_email_date TEXT")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE contacts ADD COLUMN last_inbound_email_date TEXT")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE contacts ADD COLUMN last_email_subject TEXT")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE contacts ADD COLUMN email_synced_at TEXT")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE contacts ADD COLUMN followup_dismissed_at TEXT")
+    except:
+        pass
+
     # Quotes table - for creating and tracking quotes/proposals
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS quotes (
@@ -690,6 +712,94 @@ def get_untouched_leads(days_threshold=7, limit=20):
         LIMIT ?
     """, (limit,))
 
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def update_contact_email_status(contact_id, last_outbound_date, last_inbound_date, last_outbound_subject):
+    """Update the email tracking fields for a contact."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE contacts
+        SET last_outbound_email_date = ?,
+            last_inbound_email_date = ?,
+            last_email_subject = ?,
+            email_synced_at = ?
+        WHERE id = ?
+    """, (last_outbound_date, last_inbound_date, last_outbound_subject,
+          datetime.now().isoformat(), contact_id))
+    conn.commit()
+    conn.close()
+    return {"success": True}
+
+
+def dismiss_contact_followup(contact_id):
+    """Dismiss a contact from the awaiting response queue (e.g., talked on phone)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE contacts SET followup_dismissed_at = ? WHERE id = ?
+    """, (datetime.now().isoformat(), contact_id))
+    conn.commit()
+    conn.close()
+    return {"success": True}
+
+
+def get_awaiting_response_contacts(days_threshold=3, limit=20):
+    """
+    Get contacts awaiting a response - emailed but no reply within threshold days.
+    Only includes contacts created from 2026-01-01 onwards.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Use different date functions based on database type
+    if os.environ.get('DATABASE_URL'):
+        # PostgreSQL
+        date_diff = f"EXTRACT(EPOCH FROM (NOW() - last_outbound_email_date::timestamp)) / 86400"
+    else:
+        # SQLite
+        date_diff = "julianday('now') - julianday(last_outbound_email_date)"
+
+    cursor.execute(f"""
+        SELECT id, first_name, last_name, email, phone, created_at,
+               last_outbound_email_date, last_inbound_email_date,
+               last_email_subject, email_synced_at, followup_dismissed_at
+        FROM contacts
+        WHERE last_outbound_email_date IS NOT NULL
+          AND (
+            last_inbound_email_date IS NULL
+            OR last_outbound_email_date > last_inbound_email_date
+          )
+          AND {date_diff} >= ?
+          AND (followup_dismissed_at IS NULL
+               OR last_outbound_email_date > followup_dismissed_at)
+          AND created_at >= '2026-01-01'
+        ORDER BY last_outbound_email_date ASC
+        LIMIT ?
+    """, (days_threshold, limit))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_contacts_for_email_sync(limit=500):
+    """Get contacts with email addresses for syncing email status."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    # Use CASE to handle NULL sorting (works in both SQLite and PostgreSQL)
+    cursor.execute("""
+        SELECT id, email FROM contacts
+        WHERE email IS NOT NULL AND email != ''
+        ORDER BY
+            CASE WHEN email_synced_at IS NULL THEN 0 ELSE 1 END,
+            email_synced_at ASC,
+            created_at DESC
+        LIMIT ?
+    """, (limit,))
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
