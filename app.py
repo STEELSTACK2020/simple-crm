@@ -146,13 +146,17 @@ def format_date_filter(value, format='%Y-%m-%d'):
 
 @app.template_filter('parse_iso_date')
 def parse_iso_date_filter(value):
-    """Parse an ISO date string into a datetime object."""
+    """Parse an ISO date string into a timezone-naive datetime object."""
     if value is None:
         return None
     if isinstance(value, str):
         try:
             from dateutil import parser as date_parser
-            return date_parser.parse(value)
+            parsed = date_parser.parse(value)
+            # Strip timezone info to allow comparison with datetime.now()
+            if parsed.tzinfo is not None:
+                parsed = parsed.replace(tzinfo=None)
+            return parsed
         except:
             return None
     return value
