@@ -502,7 +502,7 @@ def disconnect_outlook(user_id):
 def fetch_outlook_emails(user_id, email_address, max_results=20):
     """
     Fetch emails to/from a specific email address from Outlook.
-    Searches both inbox and sent items folders.
+    Searches inbox, sent items, and deleted items folders.
     Returns list of email summaries (not stored in DB).
     """
     import requests
@@ -520,8 +520,8 @@ def fetch_outlook_emails(user_id, email_address, max_results=20):
         all_messages = []
         seen_ids = set()
 
-        # Search both inbox and sent items
-        folders = ['inbox', 'sentitems']
+        # Search inbox, sent items, and deleted items (users often delete after responding)
+        folders = ['inbox', 'sentitems', 'deleteditems']
         for folder in folders:
             search_url = f"https://graph.microsoft.com/v1.0/me/mailFolders/{folder}/messages?$search=\"{email_address}\"&$top={max_results}"
             response = requests.get(search_url, headers=headers)
