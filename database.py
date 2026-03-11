@@ -763,59 +763,62 @@ def dismiss_contact_followup(contact_id):
     return {"success": True}
 
 
-def get_awaiting_response_contacts(days_threshold=3, limit=20):
+def get_awaiting_response_contacts(days_threshold=3, limit=20, offset=0):
     """
     Get contacts awaiting a response - emailed but no reply within threshold days.
     Only includes contacts created from 2026-01-01 onwards.
+    Sorted by newest contact first (created_at DESC).
     """
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Use different date functions and placeholders based on database type
-    if os.environ.get('DATABASE_URL'):
-        # PostgreSQL uses %s placeholders
-        date_diff = "EXTRACT(EPOCH FROM (NOW() - last_outbound_email_date::timestamp)) / 86400"
-        cursor.execute(f"""
-            SELECT id, first_name, last_name, email, phone, created_at,
-                   last_outbound_email_date, last_inbound_email_date,
-                   last_email_subject, email_synced_at, followup_dismissed_at
-            FROM contacts
-            WHERE last_outbound_email_date IS NOT NULL
-              AND (
-                last_inbound_email_date IS NULL
-                OR last_outbound_email_date > last_inbound_email_date
-              )
-              AND {date_diff} >= %s
-              AND (followup_dismissed_at IS NULL
-                   OR last_outbound_email_date > followup_dismissed_at)
-              AND created_at >= '2026-01-01'
-            ORDER BY last_outbound_email_date ASC
-            LIMIT %s
-        """, (days_threshold, limit))
-    else:
-        # SQLite uses ? placeholders
-        date_diff = "julianday('now') - julianday(last_outbound_email_date)"
-        cursor.execute(f"""
-            SELECT id, first_name, last_name, email, phone, created_at,
-                   last_outbound_email_date, last_inbound_email_date,
-                   last_email_subject, email_synced_at, followup_dismissed_at
-            FROM contacts
-            WHERE last_outbound_email_date IS NOT NULL
-              AND (
-                last_inbound_email_date IS NULL
-                OR last_outbound_email_date > last_inbound_email_date
-              )
-              AND {date_diff} >= ?
-              AND (followup_dismissed_at IS NULL
-                   OR last_outbound_email_date > followup_dismissed_at)
-              AND created_at >= '2026-01-01'
-            ORDER BY last_outbound_email_date ASC
-            LIMIT ?
-        """, (days_threshold, limit))
+    # PostgreSQL uses %s placeholders
+    date_diff = "EXTRACT(EPOCH FROM (NOW() - last_outbound_email_date::timestamp)) / 86400"
+    cursor.execute(f"""
+        SELECT id, first_name, last_name, email, phone, created_at,
+               last_outbound_email_date, last_inbound_email_date,
+               last_email_subject, email_synced_at, followup_dismissed_at
+        FROM contacts
+        WHERE last_outbound_email_date IS NOT NULL
+          AND (
+            last_inbound_email_date IS NULL
+            OR last_outbound_email_date > last_inbound_email_date
+          )
+          AND {date_diff} >= %s
+          AND (followup_dismissed_at IS NULL
+               OR last_outbound_email_date > followup_dismissed_at)
+          AND created_at >= '2026-01-01'
+        ORDER BY created_at DESC
+        LIMIT %s OFFSET %s
+    """, (days_threshold, limit, offset))
 
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+def get_awaiting_response_count(days_threshold=3):
+    """Get total count of contacts awaiting response (for pagination)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    date_diff = "EXTRACT(EPOCH FROM (NOW() - last_outbound_email_date::timestamp)) / 86400"
+    cursor.execute(f"""
+        SELECT COUNT(*) as cnt FROM contacts
+        WHERE last_outbound_email_date IS NOT NULL
+          AND (
+            last_inbound_email_date IS NULL
+            OR last_outbound_email_date > last_inbound_email_date
+          )
+          AND {date_diff} >= %s
+          AND (followup_dismissed_at IS NULL
+               OR last_outbound_email_date > followup_dismissed_at)
+          AND created_at >= '2026-01-01'
+    """, (days_threshold,))
+
+    result = cursor.fetchone()
+    conn.close()
+    return result['cnt'] if result else 0
 
 
 def get_contacts_for_email_sync(limit=500):
