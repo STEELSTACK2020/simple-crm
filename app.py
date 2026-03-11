@@ -348,7 +348,7 @@ def dashboard():
 
     # Awaiting Response pagination
     ar_page = request.args.get('ar_page', 1, type=int)
-    ar_per_page = 25
+    ar_per_page = 50
     ar_offset = (ar_page - 1) * ar_per_page
     awaiting_response = get_awaiting_response_contacts(days_threshold=3, limit=ar_per_page, offset=ar_offset)
     ar_total = get_awaiting_response_count(days_threshold=3)
