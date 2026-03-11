@@ -1206,40 +1206,57 @@ def api_sync_email_status():
     Sync email status for all contacts.
     Fetches emails from all connected users and updates last_inbound/outbound dates.
     """
-    from email_integration import fetch_emails_for_contact_all_users, analyze_email_status
-    from database import get_contacts_for_email_sync, update_contact_email_status
+    import traceback
+    try:
+        from email_integration import fetch_emails_for_contact_all_users, analyze_email_status
+        from database import get_contacts_for_email_sync, update_contact_email_status, get_users_with_email_connected
 
-    contacts = get_contacts_for_email_sync(limit=500)
-    synced_count = 0
-    errors = []
+        # Check if any users have email connected
+        connected_users = get_users_with_email_connected()
+        if not connected_users:
+            return jsonify({
+                "success": False,
+                "error": "No users have email connected. Go to Settings > Email to connect Outlook."
+            })
 
-    for contact in contacts:
-        try:
-            email_address = contact['email']
-            result = fetch_emails_for_contact_all_users(email_address, max_results=30)
+        contacts = get_contacts_for_email_sync(limit=100)  # Reduced batch size
+        synced_count = 0
+        errors = []
 
-            if result.get('success') and result.get('emails'):
-                status = analyze_email_status(result['emails'], email_address)
-                update_contact_email_status(
-                    contact['id'],
-                    status['last_outbound_date'],
-                    status['last_inbound_date'],
-                    status['last_outbound_subject']
-                )
-                synced_count += 1
-            elif result.get('emails') == []:
-                # No emails found - still mark as synced
-                update_contact_email_status(contact['id'], None, None, None)
-                synced_count += 1
-        except Exception as e:
-            errors.append(f"{contact['email']}: {str(e)}")
+        for contact in contacts:
+            try:
+                email_address = contact['email']
+                result = fetch_emails_for_contact_all_users(email_address, max_results=20)
 
-    return jsonify({
-        "success": True,
-        "synced_count": synced_count,
-        "total_contacts": len(contacts),
-        "errors": errors if errors else None
-    })
+                if result.get('success') and result.get('emails'):
+                    status = analyze_email_status(result['emails'], email_address)
+                    update_contact_email_status(
+                        contact['id'],
+                        status['last_outbound_date'],
+                        status['last_inbound_date'],
+                        status['last_outbound_subject']
+                    )
+                    synced_count += 1
+                else:
+                    # No emails found or error - still mark as synced
+                    update_contact_email_status(contact['id'], None, None, None)
+                    synced_count += 1
+            except Exception as e:
+                errors.append(f"{contact['email']}: {str(e)}")
+                print(f"Error syncing {contact['email']}: {traceback.format_exc()}")
+
+        return jsonify({
+            "success": True,
+            "synced_count": synced_count,
+            "total_contacts": len(contacts),
+            "errors": errors if errors else None
+        })
+    except Exception as e:
+        print(f"Sync error: {traceback.format_exc()}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 @app.route('/api/contacts/<int:contact_id>/dismiss-followup', methods=['POST'])
