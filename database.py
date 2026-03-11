@@ -816,7 +816,7 @@ def get_awaiting_response_count(days_threshold=3):
 
 
 def get_contacts_for_email_sync(limit=500):
-    """Get contacts with email addresses for syncing email status."""
+    """Get contacts with email addresses for syncing email status (2026+ only)."""
     conn = get_connection()
     cursor = conn.cursor()
     # Use CASE to handle NULL sorting (works in both SQLite and PostgreSQL)
@@ -824,6 +824,7 @@ def get_contacts_for_email_sync(limit=500):
     cursor.execute(f"""
         SELECT id, email FROM contacts
         WHERE email IS NOT NULL AND email != ''
+          AND created_at >= '2026-01-01'
         ORDER BY
             CASE WHEN email_synced_at IS NULL THEN 0 ELSE 1 END,
             email_synced_at ASC,
