@@ -1273,7 +1273,15 @@ def api_sync_email_status():
             print(f"Sync error: {traceback.format_exc()}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
-    return Response(generate(), mimetype='text/event-stream')
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',  # Disable buffering for Nginx/proxies
+            'Connection': 'keep-alive'
+        }
+    )
 
 
 @app.route('/api/contacts/<int:contact_id>/dismiss-followup', methods=['POST'])
