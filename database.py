@@ -721,15 +721,26 @@ def update_contact_email_status(contact_id, last_outbound_date, last_inbound_dat
     """Update the email tracking fields for a contact."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE contacts
-        SET last_outbound_email_date = ?,
-            last_inbound_email_date = ?,
-            last_email_subject = ?,
-            email_synced_at = ?
-        WHERE id = ?
-    """, (last_outbound_date, last_inbound_date, last_outbound_subject,
-          datetime.now().isoformat(), contact_id))
+    if os.environ.get('DATABASE_URL'):
+        cursor.execute("""
+            UPDATE contacts
+            SET last_outbound_email_date = %s,
+                last_inbound_email_date = %s,
+                last_email_subject = %s,
+                email_synced_at = %s
+            WHERE id = %s
+        """, (last_outbound_date, last_inbound_date, last_outbound_subject,
+              datetime.now().isoformat(), contact_id))
+    else:
+        cursor.execute("""
+            UPDATE contacts
+            SET last_outbound_email_date = ?,
+                last_inbound_email_date = ?,
+                last_email_subject = ?,
+                email_synced_at = ?
+            WHERE id = ?
+        """, (last_outbound_date, last_inbound_date, last_outbound_subject,
+              datetime.now().isoformat(), contact_id))
     conn.commit()
     conn.close()
     return {"success": True}
@@ -739,9 +750,14 @@ def dismiss_contact_followup(contact_id):
     """Dismiss a contact from the awaiting response queue (e.g., talked on phone)."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE contacts SET followup_dismissed_at = ? WHERE id = ?
-    """, (datetime.now().isoformat(), contact_id))
+    if os.environ.get('DATABASE_URL'):
+        cursor.execute("""
+            UPDATE contacts SET followup_dismissed_at = %s WHERE id = %s
+        """, (datetime.now().isoformat(), contact_id))
+    else:
+        cursor.execute("""
+            UPDATE contacts SET followup_dismissed_at = ? WHERE id = ?
+        """, (datetime.now().isoformat(), contact_id))
     conn.commit()
     conn.close()
     return {"success": True}
@@ -755,31 +771,47 @@ def get_awaiting_response_contacts(days_threshold=3, limit=20):
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Use different date functions based on database type
+    # Use different date functions and placeholders based on database type
     if os.environ.get('DATABASE_URL'):
-        # PostgreSQL
-        date_diff = f"EXTRACT(EPOCH FROM (NOW() - last_outbound_email_date::timestamp)) / 86400"
+        # PostgreSQL uses %s placeholders
+        date_diff = "EXTRACT(EPOCH FROM (NOW() - last_outbound_email_date::timestamp)) / 86400"
+        cursor.execute(f"""
+            SELECT id, first_name, last_name, email, phone, created_at,
+                   last_outbound_email_date, last_inbound_email_date,
+                   last_email_subject, email_synced_at, followup_dismissed_at
+            FROM contacts
+            WHERE last_outbound_email_date IS NOT NULL
+              AND (
+                last_inbound_email_date IS NULL
+                OR last_outbound_email_date > last_inbound_email_date
+              )
+              AND {date_diff} >= %s
+              AND (followup_dismissed_at IS NULL
+                   OR last_outbound_email_date > followup_dismissed_at)
+              AND created_at >= '2026-01-01'
+            ORDER BY last_outbound_email_date ASC
+            LIMIT %s
+        """, (days_threshold, limit))
     else:
-        # SQLite
+        # SQLite uses ? placeholders
         date_diff = "julianday('now') - julianday(last_outbound_email_date)"
-
-    cursor.execute(f"""
-        SELECT id, first_name, last_name, email, phone, created_at,
-               last_outbound_email_date, last_inbound_email_date,
-               last_email_subject, email_synced_at, followup_dismissed_at
-        FROM contacts
-        WHERE last_outbound_email_date IS NOT NULL
-          AND (
-            last_inbound_email_date IS NULL
-            OR last_outbound_email_date > last_inbound_email_date
-          )
-          AND {date_diff} >= ?
-          AND (followup_dismissed_at IS NULL
-               OR last_outbound_email_date > followup_dismissed_at)
-          AND created_at >= '2026-01-01'
-        ORDER BY last_outbound_email_date ASC
-        LIMIT ?
-    """, (days_threshold, limit))
+        cursor.execute(f"""
+            SELECT id, first_name, last_name, email, phone, created_at,
+                   last_outbound_email_date, last_inbound_email_date,
+                   last_email_subject, email_synced_at, followup_dismissed_at
+            FROM contacts
+            WHERE last_outbound_email_date IS NOT NULL
+              AND (
+                last_inbound_email_date IS NULL
+                OR last_outbound_email_date > last_inbound_email_date
+              )
+              AND {date_diff} >= ?
+              AND (followup_dismissed_at IS NULL
+                   OR last_outbound_email_date > followup_dismissed_at)
+              AND created_at >= '2026-01-01'
+            ORDER BY last_outbound_email_date ASC
+            LIMIT ?
+        """, (days_threshold, limit))
 
     rows = cursor.fetchall()
     conn.close()
@@ -791,14 +823,15 @@ def get_contacts_for_email_sync(limit=500):
     conn = get_connection()
     cursor = conn.cursor()
     # Use CASE to handle NULL sorting (works in both SQLite and PostgreSQL)
-    cursor.execute("""
+    placeholder = "%s" if os.environ.get('DATABASE_URL') else "?"
+    cursor.execute(f"""
         SELECT id, email FROM contacts
         WHERE email IS NOT NULL AND email != ''
         ORDER BY
             CASE WHEN email_synced_at IS NULL THEN 0 ELSE 1 END,
             email_synced_at ASC,
             created_at DESC
-        LIMIT ?
+        LIMIT {placeholder}
     """, (limit,))
     rows = cursor.fetchall()
     conn.close()
