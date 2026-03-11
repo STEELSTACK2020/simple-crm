@@ -27,8 +27,7 @@
     </div>
 </div>
 
-<!-- Awaiting Response Widget -->
-{% if awaiting_response %}
+<!-- Awaiting Response Widget - Always show so user can sync -->
 <div class="bg-white rounded-lg shadow overflow-hidden mb-8 border-l-4 border-amber-500">
     <div class="px-6 py-4 border-b bg-amber-50 flex justify-between items-center">
         <div>
@@ -42,9 +41,10 @@
                 </svg>
                 <span id="sync-text">Sync Now</span>
             </button>
-            <span class="bg-amber-600 text-white text-lg font-bold px-3 py-1 rounded-full">{{ awaiting_response|length }}</span>
+            <span class="bg-amber-600 text-white text-lg font-bold px-3 py-1 rounded-full">{{ awaiting_response|length if awaiting_response else 0 }}</span>
         </div>
     </div>
+    {% if awaiting_response %}
     <div class="max-h-72 overflow-y-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50 sticky top-0">
@@ -93,6 +93,12 @@
             </tbody>
         </table>
     </div>
+    {% else %}
+    <div class="px-6 py-8 text-center text-gray-500">
+        <p class="mb-2">No contacts awaiting response.</p>
+        <p class="text-sm">Click "Sync Now" to scan your email history.</p>
+    </div>
+    {% endif %}
     <div class="px-6 py-3 bg-gray-50 border-t flex justify-between items-center">
         <a href="/contacts" class="text-sm text-amber-600 hover:text-amber-800 font-medium">View all contacts →</a>
         <span class="text-xs text-gray-400" id="sync-status"></span>
@@ -159,7 +165,6 @@ async function dismissFollowup(contactId) {
     }
 }
 </script>
-{% endif %}
 
 <!-- Date Filter Controls -->
 <div class="bg-white rounded-lg shadow p-4 mb-8">
