@@ -1232,7 +1232,7 @@ def api_sync_email_status():
                 yield f"data: {json.dumps({'error': 'No users have email connected. Go to Settings > Email to connect Outlook.'})}\n\n"
                 return
 
-            contacts = get_contacts_for_email_sync(limit=250)  # Batch size per sync
+            contacts = get_contacts_for_email_sync(limit=500)  # Sync all 2026+ contacts in one click
             total = len(contacts)
             synced_count = 0
             errors = []
