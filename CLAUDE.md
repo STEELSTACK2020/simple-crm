@@ -13,11 +13,17 @@
 - Deploy command: `git add . && git commit -m "message" && git push origin main`
 - Railway runs via `Procfile`: `web: gunicorn app:app --bind 0.0.0.0:$PORT`
 - Database: PostgreSQL on Railway (connected via `DATABASE_URL` env var)
-- Locally: SQLite fallback (`crm.db`) when no `DATABASE_URL` is set
+
+## Database Rules (IMPORTANT)
+- **Always use PostgreSQL** - Do NOT use SQLite fallback
+- Local dev connects to the same Railway PostgreSQL via `DATABASE_URL` in `.env`
+- Use `%s` placeholders for queries (PostgreSQL), not `?` (SQLite)
+- New columns require a migration function (see `add_email_tracking_columns()` pattern)
+- The `init_database()` function returns early for PostgreSQL - add migrations separately
 
 ## Key Files
 - `app.py` - Main Flask app (routes, API, templates)
-- `database.py` - All database functions (supports PostgreSQL + SQLite)
+- `database.py` - All database functions (PostgreSQL)
 - `pdf_generator.py` - Quote PDF generation (Steelstack branding)
 - `email_integration.py` - Outlook/Gmail OAuth email integration
 - `shipping_calculator.py` - ZIP code distance + shipping cost
@@ -39,7 +45,7 @@
 
 ## Tech Stack
 - Backend: Python 3, Flask, Gunicorn
-- Database: PostgreSQL (Railway) / SQLite (local)
+- Database: PostgreSQL (Railway) - no SQLite
 - Frontend: HTML, Tailwind CSS (CDN), Chart.js (CDN)
 - PDF: ReportLab
 - Dependencies: see `requirements.txt`
