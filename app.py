@@ -886,30 +886,37 @@ def marketing_oauth_callback():
     if not is_oauth_configured():
         return redirect(url_for('marketing_settings'))
 
-    # Build redirect URI dynamically for local vs Railway
-    railway_url = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
-    if railway_url:
-        redirect_uri = f"https://{railway_url}/marketing/oauth/callback"
-    else:
-        redirect_uri = 'http://localhost:5000/marketing/oauth/callback'
+    try:
+        # Build redirect URI dynamically for local vs Railway
+        railway_url = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+        if railway_url:
+            redirect_uri = f"https://{railway_url}/marketing/oauth/callback"
+        else:
+            redirect_uri = 'http://localhost:5000/marketing/oauth/callback'
 
-    flow = get_oauth_flow(redirect_uri=redirect_uri)
-    if not flow:
-        return "OAuth not configured", 400
+        flow = get_oauth_flow(redirect_uri=redirect_uri)
+        if not flow:
+            return "OAuth not configured", 400
 
-    # Get the authorization response - fix HTTP to HTTPS for Railway
-    auth_response = request.url
-    if railway_url and auth_response.startswith('http://'):
-        auth_response = auth_response.replace('http://', 'https://', 1)
+        # Get the authorization response - fix HTTP to HTTPS for Railway
+        auth_response = request.url
+        if railway_url and auth_response.startswith('http://'):
+            auth_response = auth_response.replace('http://', 'https://', 1)
 
-    flow.fetch_token(authorization_response=auth_response)
+        flow.fetch_token(authorization_response=auth_response)
 
-    # Save the credentials
-    credentials = flow.credentials
-    save_oauth_token(credentials)
+        # Save the credentials
+        credentials = flow.credentials
+        save_oauth_token(credentials)
 
-    # Redirect to property selection
-    return redirect(url_for('marketing_select_property'))
+        # Redirect to property selection
+        return redirect(url_for('marketing_select_property'))
+
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"OAuth callback error: {error_details}")
+        return f"<h1>OAuth Error</h1><pre>{error_details}</pre><p><a href='/marketing/settings'>Back to Settings</a></p>", 500
 
 
 @app.route('/marketing/select-property', methods=['GET', 'POST'])
