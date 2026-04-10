@@ -80,6 +80,7 @@
                         <div class="absolute right-0 mt-1 w-44 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                             {% if current_user and current_user.role == 'admin' %}
                             <a href="/settings/users" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-md">User Management</a>
+                            <a href="/settings/backup" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Database Backup</a>
                             {% endif %}
                             <a href="/settings/email" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Email Integration</a>
                             <a href="/marketing/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-b-md">GA Settings</a>
@@ -216,6 +217,7 @@
                     <div class="mobile-accordion-content hidden bg-gray-50">
                         {% if current_user and current_user.role == 'admin' %}
                         <a href="/settings/users" class="block px-8 py-3 text-gray-600 hover:bg-gray-100">User Management</a>
+                        <a href="/settings/backup" class="block px-8 py-3 text-gray-600 hover:bg-gray-100">Database Backup</a>
                         {% endif %}
                         <a href="/settings/email" class="block px-8 py-3 text-gray-600 hover:bg-gray-100">Email Integration</a>
                         <a href="/marketing/settings" class="block px-8 py-3 text-gray-600 hover:bg-gray-100">GA Settings</a>
