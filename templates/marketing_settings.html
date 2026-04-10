@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="mb-6">
-    <a href="/traffic" class="text-slate-800 hover:text-teal-800 text-sm">&larr; Back to Traffic Dashboard</a>
+    <a href="/marketing" class="text-slate-800 hover:text-teal-800 text-sm">&larr; Back to Traffic Dashboard</a>
 </div>
 
 <div class="max-w-2xl mx-auto">
@@ -72,7 +72,7 @@
                             <p class="text-sm text-gray-500">Property ID: {{ site.property_id }}</p>
                         </div>
                         {% if websites|length > 1 %}
-                        <form method="POST" action="/traffic/websites/{{ site.id }}/remove"
+                        <form method="POST" action="/marketing/websites/{{ site.id }}/remove"
                               onsubmit="return confirm('Remove {{ site.name }}?');">
                             <button type="submit" class="text-red-600 hover:text-red-800 text-sm">
                                 Remove
@@ -87,7 +87,7 @@
                 <!-- Add Website Form -->
                 <div class="bg-purple-50 border border-teal-200 rounded-lg p-4">
                     <h4 class="font-medium text-slate-900 mb-3">Add Another Website</h4>
-                    <form method="POST" action="/traffic/websites/add" class="space-y-3">
+                    <form method="POST" action="/marketing/websites/add" class="space-y-3">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Website Name</label>
@@ -118,7 +118,7 @@
                     <div>
                         <h3 class="text-lg font-semibold text-gray-700 mb-2">Reconnect</h3>
                         <p class="text-sm text-gray-500 mb-3">Re-authorize without losing your websites</p>
-                        <a href="/traffic/oauth/authorize" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                        <a href="/marketing/oauth/authorize" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -131,7 +131,7 @@
                     <div class="text-right">
                         <h3 class="text-lg font-semibold text-red-600 mb-2">Disconnect</h3>
                         <p class="text-sm text-gray-500 mb-3">Remove connection and all websites</p>
-                        <form method="POST" action="/traffic/disconnect" onsubmit="return confirm('Are you sure you want to disconnect Google Analytics? This will remove all websites.');">
+                        <form method="POST" action="/marketing/disconnect" onsubmit="return confirm('Are you sure you want to disconnect Google Analytics? This will remove all websites.');">
                             <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
                                 Disconnect
                             </button>
@@ -146,7 +146,7 @@
             {% if oauth_configured and not ga_connected %}
             <!-- Connect Button -->
             <div class="mb-8 text-center">
-                <a href="/traffic/oauth/authorize" class="inline-flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg shadow-lg">
+                <a href="/marketing/oauth/authorize" class="inline-flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg shadow-lg">
                     <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -190,7 +190,7 @@
                         <p class="ml-6 text-sm text-gray-500">Go to APIs & Services > Credentials > Create Credentials > OAuth client ID</p>
                         <p class="ml-6 text-sm text-gray-500">Application type: <strong>Web application</strong></p>
                         <p class="ml-6 text-sm text-gray-500">Under "Authorized redirect URIs" click + ADD URI and enter:</p>
-                        <p class="ml-6 text-sm"><code class="bg-gray-100 px-2 py-1 rounded">http://localhost:5000/traffic/oauth/callback</code></p>
+                        <p class="ml-6 text-sm"><code class="bg-gray-100 px-2 py-1 rounded">http://localhost:5000/marketing/oauth/callback</code></p>
                         <p class="ml-6 text-sm text-gray-500">Click Create</p>
                     </li>
                     <li>
