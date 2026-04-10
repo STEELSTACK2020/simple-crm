@@ -870,9 +870,10 @@ def marketing_oauth_authorize():
         login_hint='sales_mtf@blomand.net'
     )
 
-    # Store state in session for verification
+    # Store state and code_verifier in session (needed for PKCE)
     from flask import session
     session['oauth_state'] = state
+    session['oauth_code_verifier'] = flow.code_verifier
 
     return redirect(authorization_url)
 
@@ -903,7 +904,14 @@ def marketing_oauth_callback():
         if railway_url and auth_response.startswith('http://'):
             auth_response = auth_response.replace('http://', 'https://', 1)
 
-        flow.fetch_token(authorization_response=auth_response)
+        # Get code_verifier from session (needed for PKCE)
+        code_verifier = session.get('oauth_code_verifier')
+
+        flow.fetch_token(authorization_response=auth_response, code_verifier=code_verifier)
+
+        # Clean up session
+        session.pop('oauth_code_verifier', None)
+        session.pop('oauth_state', None)
 
         # Save the credentials
         credentials = flow.credentials
