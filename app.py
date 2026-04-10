@@ -48,7 +48,9 @@ from database import (
     delete_marketing_shortcut, init_default_marketing_shortcuts,
     get_marketing_categories, add_marketing_category, update_marketing_category,
     delete_marketing_category, get_shortcuts_by_category, add_missing_shortcuts,
-    reorder_shortcuts, move_shortcut_to_category
+    reorder_shortcuts, move_shortcut_to_category,
+    # Backup
+    create_full_backup, get_backup_stats
 )
 from pdf_generator import generate_quote_pdf
 from shipping_calculator import calculate_shipping_cost, DEFAULT_ORIGIN_ZIP, RATE_PER_MILE
@@ -1418,6 +1420,38 @@ def user_delete(user_id):
 
     delete_user(user_id)
     return redirect(url_for('user_management'))
+
+
+# ============== Database Backup Routes ==============
+
+@app.route('/settings/backup')
+@login_required
+@admin_required
+def backup_page():
+    """Show backup page with database stats."""
+    stats = get_backup_stats()
+    return render_template('backup.html', stats=stats)
+
+
+@app.route('/settings/backup/download')
+@login_required
+@admin_required
+def download_backup():
+    """Download a full database backup as SQL file."""
+    import io
+
+    sql_content, timestamp = create_full_backup()
+
+    # Create file-like object
+    sql_bytes = io.BytesIO(sql_content.encode('utf-8'))
+    filename = f"simple-crm-backup-{timestamp}.sql"
+
+    return send_file(
+        sql_bytes,
+        mimetype='application/sql',
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 # ============== Deals Routes ==============

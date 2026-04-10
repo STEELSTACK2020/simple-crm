@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Database Backup - Simple CRM{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Database Backup</h1>
+    <p class="mt-2 text-gray-600">Download a complete backup of your CRM database</p>
+</div>
+
+<!-- Info Box -->
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+    <h3 class="font-semibold text-blue-800 mb-2">About Backups</h3>
+    <ul class="text-sm text-blue-700 space-y-1">
+        <li>- Downloads a complete SQL file with all tables and data</li>
+        <li>- Can be used to restore the database in case of failure</li>
+        <li>- Includes schema (table structure) and all records</li>
+        <li>- Store backups in a safe location (OneDrive, external drive, etc.)</li>
+    </ul>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Download Backup Card -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b bg-gray-50 flex items-center gap-3">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Download Backup</h2>
+                <p class="text-sm text-gray-500">Get a complete SQL backup file</p>
+            </div>
+        </div>
+        <div class="p-6">
+            <p class="text-sm text-gray-600 mb-4">
+                Click the button below to generate and download a full database backup.
+                The file will include all tables, columns, and data.
+            </p>
+            <a href="{{ url_for('download_backup') }}" class="block w-full bg-green-600 text-white text-center px-4 py-3 rounded-lg hover:bg-green-700 font-medium">
+                Download Full Backup (.sql)
+            </a>
+        </div>
+    </div>
+
+    <!-- Database Stats Card -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b bg-gray-50 flex items-center gap-3">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+            </svg>
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Database Statistics</h2>
+                <p class="text-sm text-gray-500">Current record counts</p>
+            </div>
+        </div>
+        <div class="p-6">
+            <table class="w-full text-sm">
+                <tbody class="divide-y divide-gray-200">
+                    <tr>
+                        <td class="py-2 text-gray-600">Contacts</td>
+                        <td class="py-2 text-right font-semibold">{{ stats.contacts | default(0) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-600">Companies</td>
+                        <td class="py-2 text-right font-semibold">{{ stats.companies | default(0) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-600">Deals</td>
+                        <td class="py-2 text-right font-semibold">{{ stats.deals | default(0) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-600">Quotes</td>
+                        <td class="py-2 text-right font-semibold">{{ stats.quotes | default(0) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-600">Quote Items</td>
+                        <td class="py-2 text-right font-semibold">{{ stats.quote_items | default(0) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-600">Products</td>
+                        <td class="py-2 text-right font-semibold">{{ stats.products | default(0) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-600">Salespeople</td>
+                        <td class="py-2 text-right font-semibold">{{ stats.salespeople | default(0) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-600">Users</td>
+                        <td class="py-2 text-right font-semibold">{{ stats.users | default(0) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Restore Instructions -->
+<div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+    <h3 class="font-semibold text-yellow-800 mb-2">How to Restore from Backup</h3>
+    <ol class="text-sm text-yellow-700 space-y-2 list-decimal list-inside">
+        <li>Connect to your PostgreSQL database using psql or a GUI tool</li>
+        <li>Run the SQL file: <code class="bg-yellow-100 px-1 rounded">psql DATABASE_URL < backup-file.sql</code></li>
+        <li>Or use Railway's database console to run the SQL commands</li>
+    </ol>
+</div>
+{% endblock %}

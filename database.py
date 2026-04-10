@@ -3876,5 +3876,174 @@ def add_missing_shortcuts():
     return added
 
 
+def create_full_backup():
+    """
+    Create a complete database backup with schema and data.
+    Returns a SQL string that can fully restore the database.
+    """
+    from datetime import datetime
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+
+    sql_lines = [
+        f"-- Simple CRM FULL Backup - {timestamp}",
+        "-- This backup includes schema + data and can fully restore the database",
+        ""
+    ]
+
+    # Get all tables in the database
+    cursor.execute("""
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+    """)
+    tables = [row['table_name'] for row in cursor.fetchall()]
+
+    # Process each table
+    for table_name in tables:
+        sql_lines.append(f"-- Table: {table_name}")
+
+        # Get column info
+        cursor.execute("""
+            SELECT column_name, data_type, column_default, is_nullable,
+                   character_maximum_length, numeric_precision, numeric_scale
+            FROM information_schema.columns
+            WHERE table_name = %s AND table_schema = 'public'
+            ORDER BY ordinal_position
+        """, (table_name,))
+        columns = cursor.fetchall()
+
+        # Get primary key info
+        cursor.execute("""
+            SELECT kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+                ON tc.constraint_name = kcu.constraint_name
+            WHERE tc.table_name = %s AND tc.constraint_type = 'PRIMARY KEY'
+        """, (table_name,))
+        pk_columns = [row['column_name'] for row in cursor.fetchall()]
+
+        # Build CREATE TABLE statement
+        sql_lines.append(f"DROP TABLE IF EXISTS {table_name} CASCADE;")
+
+        col_defs = []
+        for col in columns:
+            col_name = col['column_name']
+            data_type = col['data_type'].upper()
+
+            # Handle data type with length/precision
+            if col['character_maximum_length']:
+                data_type = f"{data_type}({col['character_maximum_length']})"
+            elif col['numeric_precision'] and data_type == 'NUMERIC':
+                if col['numeric_scale']:
+                    data_type = f"{data_type}({col['numeric_precision']},{col['numeric_scale']})"
+                else:
+                    data_type = f"{data_type}({col['numeric_precision']})"
+
+            col_def = f"    {col_name} {data_type}"
+
+            # Add NOT NULL constraint
+            if col['is_nullable'] == 'NO':
+                col_def += " NOT NULL"
+
+            # Add default value (skip sequence defaults, handle separately)
+            if col['column_default'] and 'nextval' not in str(col['column_default']):
+                col_def += f" DEFAULT {col['column_default']}"
+
+            col_defs.append(col_def)
+
+        # Add primary key
+        if pk_columns:
+            col_defs.append(f"    PRIMARY KEY ({', '.join(pk_columns)})")
+
+        create_sql = f"CREATE TABLE {table_name} (\n" + ",\n".join(col_defs) + "\n);"
+        sql_lines.append(create_sql)
+
+        # Get sequence info for auto-increment columns
+        cursor.execute("""
+            SELECT column_name, column_default
+            FROM information_schema.columns
+            WHERE table_name = %s AND table_schema = 'public'
+            AND column_default LIKE 'nextval%%'
+        """, (table_name,))
+        seq_cols = cursor.fetchall()
+
+        for seq_col in seq_cols:
+            # Extract sequence name from default
+            default = seq_col['column_default']
+            if 'nextval' in default:
+                # Create sequence and set default
+                seq_name = f"{table_name}_{seq_col['column_name']}_seq"
+                sql_lines.append(f"CREATE SEQUENCE IF NOT EXISTS {seq_name};")
+                sql_lines.append(f"ALTER TABLE {table_name} ALTER COLUMN {seq_col['column_name']} SET DEFAULT nextval('{seq_name}'::regclass);")
+
+        # Export data
+        cursor.execute(f"SELECT * FROM {table_name}")
+        rows = cursor.fetchall()
+
+        if rows:
+            col_names = [col['column_name'] for col in columns]
+            sql_lines.append(f"-- Data for {table_name} ({len(rows)} rows)")
+
+            for row in rows:
+                values = []
+                for col_name in col_names:
+                    val = row[col_name]
+                    if val is None:
+                        values.append("NULL")
+                    elif isinstance(val, bool):
+                        values.append("TRUE" if val else "FALSE")
+                    elif isinstance(val, (int, float)):
+                        values.append(str(val))
+                    elif isinstance(val, datetime):
+                        values.append(f"'{val.isoformat()}'")
+                    else:
+                        # Escape single quotes in strings
+                        escaped = str(val).replace("'", "''")
+                        values.append(f"'{escaped}'")
+
+                insert_sql = f"INSERT INTO {table_name} ({', '.join(col_names)}) VALUES ({', '.join(values)});"
+                sql_lines.append(insert_sql)
+
+            # Update sequence to max id
+            for seq_col in seq_cols:
+                col_name = seq_col['column_name']
+                seq_name = f"{table_name}_{col_name}_seq"
+                sql_lines.append(f"SELECT setval('{seq_name}', COALESCE((SELECT MAX({col_name}) FROM {table_name}), 1));")
+
+        sql_lines.append("")  # Empty line between tables
+
+    conn.close()
+
+    return "\n".join(sql_lines), timestamp
+
+
+def get_backup_stats():
+    """Get statistics about the database for backup info."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    stats = {}
+
+    # Count rows in main tables
+    tables = ['contacts', 'companies', 'deals', 'quotes', 'quote_items', 'products', 'salespeople', 'users']
+
+    for table in tables:
+        try:
+            cursor.execute(f"SELECT COUNT(*) as count FROM {table}")
+            result = cursor.fetchone()
+            stats[table] = result['count'] if result else 0
+        except:
+            stats[table] = 0
+
+    conn.close()
+    return stats
+
+
 if __name__ == "__main__":
     init_database()
