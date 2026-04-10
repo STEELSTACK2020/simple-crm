@@ -3880,6 +3880,7 @@ def create_full_backup():
     """
     Create a complete database backup with schema and data.
     Returns a SQL string that can fully restore the database.
+    Includes: tables, sequences, data, foreign keys, indexes, and unique constraints.
     """
     from datetime import datetime
 
@@ -3891,6 +3892,7 @@ def create_full_backup():
     sql_lines = [
         f"-- Simple CRM FULL Backup - {timestamp}",
         "-- This backup includes schema + data and can fully restore the database",
+        "-- Includes: tables, sequences, data, foreign keys, indexes, unique constraints",
         ""
     ]
 
@@ -4017,6 +4019,70 @@ def create_full_backup():
                 sql_lines.append(f"SELECT setval('{seq_name}', COALESCE((SELECT MAX({col_name}) FROM {table_name}), 1));")
 
         sql_lines.append("")  # Empty line between tables
+
+    # Add foreign key constraints (after all tables and data are created)
+    sql_lines.append("-- ============== FOREIGN KEY CONSTRAINTS ==============")
+    cursor.execute("""
+        SELECT
+            tc.table_name,
+            kcu.column_name,
+            ccu.table_name AS foreign_table_name,
+            ccu.column_name AS foreign_column_name,
+            tc.constraint_name
+        FROM information_schema.table_constraints AS tc
+        JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+        JOIN information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_schema = 'public'
+    """)
+    foreign_keys = cursor.fetchall()
+
+    for fk in foreign_keys:
+        sql_lines.append(
+            f"ALTER TABLE {fk['table_name']} ADD CONSTRAINT {fk['constraint_name']} "
+            f"FOREIGN KEY ({fk['column_name']}) REFERENCES {fk['foreign_table_name']}({fk['foreign_column_name']});"
+        )
+
+    sql_lines.append("")
+
+    # Add indexes (excluding primary key indexes which are created automatically)
+    sql_lines.append("-- ============== INDEXES ==============")
+    cursor.execute("""
+        SELECT
+            indexname,
+            indexdef
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+        AND indexname NOT LIKE '%_pkey'
+        AND indexdef NOT LIKE '%UNIQUE%'
+    """)
+    indexes = cursor.fetchall()
+
+    for idx in indexes:
+        sql_lines.append(f"{idx['indexdef']};")
+
+    sql_lines.append("")
+
+    # Add unique constraints (that aren't primary keys)
+    sql_lines.append("-- ============== UNIQUE CONSTRAINTS ==============")
+    cursor.execute("""
+        SELECT
+            indexname,
+            indexdef
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+        AND indexname NOT LIKE '%_pkey'
+        AND indexdef LIKE '%UNIQUE%'
+    """)
+    unique_indexes = cursor.fetchall()
+
+    for idx in unique_indexes:
+        sql_lines.append(f"{idx['indexdef']};")
+
+    sql_lines.append("")
+    sql_lines.append("-- ============== BACKUP COMPLETE ==============")
 
     conn.close()
 
